@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Voice Translator | English ⇄ German</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1><i class="fas fa-language"></i> Voice Translator</h1>
+                <p>Real-time English ⇄ German conversation</p>
+            </div>
+            <div class="connection-status" id="connectionStatus">
+                <i class="fas fa-circle" id="statusIcon"></i>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Language Selection -->
+            <div class="language-selector">
+                <div class="language-option">
+                    <input type="radio" id="englishFirst" name="sourceLanguage" value="en" checked>
+                    <label for="englishFirst">
+                        <span class="flag">🇺🇸</span>
+                        <span>English First</span>
+                    </label>
+                </div>
+                <div class="swap-languages" id="swapLanguages">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="language-option">
+                    <input type="radio" id="germanFirst" name="sourceLanguage" value="de">
+                    <label for="germanFirst">
+                        <span class="flag">🇩🇪</span>
+                        <span>German First</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Translation Interface -->
+            <div class="translation-interface">
+                <!-- Input Section -->
+                <div class="input-section">
+                    <div class="section-header">
+                        <h3 id="inputLanguageLabel">
+                            <span class="flag" id="inputFlag">🇺🇸</span>
+                            Speak in English
+                        </h3>
+                        <div class="controls">
+                            <button class="btn-secondary" id="playInputBtn" disabled>
+                                <i class="fas fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-display" id="inputText">
+                        Press and hold the microphone button to start speaking...
+                    </div>
+                    <div class="voice-controls">
+                        <button class="voice-btn" id="recordBtn">
+                            <i class="fas fa-microphone"></i>
+                            <span>Hold to Speak</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Arrow Indicator -->
+                <div class="translation-arrow">
+                    <i class="fas fa-arrow-down"></i>
+                </div>
+
+                <!-- Output Section -->
+                <div class="output-section">
+                    <div class="section-header">
+                        <h3 id="outputLanguageLabel">
+                            <span class="flag" id="outputFlag">🇩🇪</span>
+                            German Translation
+                        </h3>
+                        <div class="controls">
+                            <button class="btn-secondary" id="playOutputBtn" disabled>
+                                <i class="fas fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-display" id="outputText">
+                        Translation will appear here...
+                    </div>
+                    <div class="audio-output">
+                        <div class="audio-visualizer" id="audioVisualizer">
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversation History -->
+            <div class="conversation-history">
+                <div class="section-header">
+                    <h3><i class="fas fa-history"></i> Conversation History</h3>
+                    <button class="btn-secondary" id="clearHistoryBtn">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <div class="empty-state">
+                        <i class="fas fa-comments"></i>
+                        <p>Start a conversation to see history</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Room Sharing (for real-time collaboration) -->
+        <div class="room-sharing">
+            <div class="room-info">
+                <h4><i class="fas fa-users"></i> Share Room</h4>
+                <div class="room-code">
+                    <input type="text" id="roomCodeInput" readonly>
+                    <button class="btn-copy" id="copyRoomBtn">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <p class="room-description">Share this code with others to start a real-time conversation</p>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+            <p>Processing translation...</p>
+        </div>
+
+        <!-- Error Toast -->
+        <div class="error-toast" id="errorToast">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorMessage"></span>
+        </div>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="audioPlayer" preload="none"></audio>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Streamlit Voice Translator - Clean Requirements
+# Essential dependencies only
+
+# Web application framework
+streamlit>=1.28.0
+
+# Speech processing
+SpeechRecognition>=3.10.0
+pyttsx3>=2.90
+
+# Translation services
+googletrans==4.0.0rc1
+
+# Basic data processing
+requests>=2.31.0
+numpy>=1.24.0
+
+# Environment variables
+python-dotenv>=1.0.0

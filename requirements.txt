@@ -1,0 +1,28 @@
+# Streamlit Voice Translator - Bulletproof Requirements
+# Only packages that install reliably on all systems
+
+# Core web framework - required
+streamlit>=1.28.0
+
+# HTTP requests for translation APIs - required
+requests>=2.25.0
+
+# Best translation library - highly recommended
+deep-translator>=1.9.0
+
+# Optional packages (install only if you want these features):
+# Uncomment the lines below if you want voice input/output
+
+# Speech recognition - for voice input
+# SpeechRecognition>=3.8.0
+
+# Text-to-speech - for audio output  
+# pyttsx3>=2.90
+
+# Environment variables (optional)
+# python-dotenv>=1.0.0
+
+# Note: Removed problematic packages that cause installation issues:
+# - numpy (compilation issues on some systems)
+# - sounddevice (requires system audio libraries)
+# - googletrans (unreliable, often breaks)

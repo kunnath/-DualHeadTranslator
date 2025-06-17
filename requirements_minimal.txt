@@ -1,0 +1,24 @@
+# Streamlit Voice Translator - Minimal Working Requirements
+# Only essential packages that are guaranteed to work
+
+# Core web framework
+streamlit>=1.28.0
+
+# HTTP requests for translation APIs
+requests>=2.25.0
+
+# Reliable translation library (replaces problematic googletrans)
+deep-translator>=1.9.0
+
+# Date/time utilities
+python-dateutil>=2.8.0
+
+# Optional packages (comment out if installation fails):
+# Speech recognition - only if you want voice input
+# SpeechRecognition>=3.8.0
+
+# Text-to-speech - only if you want audio output
+# pyttsx3>=2.90
+
+# Note: numpy and sounddevice removed due to compilation issues
+# The app will work perfectly without these packages

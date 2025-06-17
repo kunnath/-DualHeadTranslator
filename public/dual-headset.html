@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Headset Real-Time Translator</title>
+    <link rel="stylesheet" href="dual-headset.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎧 Dual Headset Translator</h1>
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Setup Section -->
+            <section class="setup-section" id="setupSection">
+                <div class="setup-card">
+                    <h2>Setup Your Device</h2>
+                    
+                    <!-- Language Selection -->
+                    <div class="language-selection">
+                        <h3>Select Your Language <span class="required">*</span></h3>
+                        <div class="language-options">
+                            <label class="language-option">
+                                <input type="radio" name="userLanguage" value="en" checked required>
+                                <span class="option-content">
+                                    <span class="flag">🇺🇸</span>
+                                    <span class="language-name">English</span>
+                                </span>
+                            </label>
+                            <label class="language-option">
+                                <input type="radio" name="userLanguage" value="de" required>
+                                <span class="option-content">
+                                    <span class="flag">🇩🇪</span>
+                                    <span class="language-name">German</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Device Type Selection -->
+                    <div class="device-selection">
+                        <h3>Device Type <span class="required">*</span></h3>
+                        <div class="device-options">
+                            <label class="device-option">
+                                <input type="radio" name="deviceType" value="headset" checked required>
+                                <span class="option-content">
+                                    <span class="icon">🎧</span>
+                                    <span class="device-name">Wireless Headset</span>
+                                </span>
+                            </label>
+                            <label class="device-option">
+                                <input type="radio" name="deviceType" value="mobile" required>
+                                <span class="option-content">
+                                    <span class="icon">📱</span>
+                                    <span class="device-name">Mobile Device</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Room Code -->
+                    <div class="room-section">
+                        <h3>Room Code <span class="required">*</span></h3>
+                        <div class="room-input-group">
+                            <input type="text" id="roomCodeInput" placeholder="Enter 6-digit room code" 
+                                   maxlength="6" style="text-transform: uppercase;" autocomplete="off" 
+                                   title="Click to edit, paste, or type room code" required>
+                            <button id="generateRoomBtn" class="btn btn-secondary" title="Generate a new random room code">🎲 Generate</button>
+                            <button id="pasteRoomBtn" class="btn btn-secondary" title="Paste room code from clipboard">📋 Paste</button>
+                            <button id="clearRoomBtn" class="btn btn-secondary" title="Clear room code">🗑️ Clear</button>
+                        </div>
+                        <div class="room-help">
+                            <p><strong>💡 How to connect with another user:</strong></p>
+                            <ul>
+                                <li><strong>Device 1 (Create room):</strong> Click "Generate" to create a new room code, then share it</li>
+                                <li><strong>Device 2 (Join room):</strong> Type or paste the 6-digit room code from the other user</li>
+                                <li><strong>Both devices:</strong> Select language and device type, then click "Start Translation Session"</li>
+                                <li><strong>Tip:</strong> Room codes are always editable - click anywhere in the field to type</li>
+                            </ul>
+                            <div class="usage-example">
+                                <p><strong>📱 Step-by-Step Example:</strong></p>
+                                <p>1. User 1 (English): Generate code "ABC123" → Share with User 2</p>
+                                <p>2. User 2 (German): Enter "ABC123" → Select German language</p>
+                                <p>3. Both users: Click "Start Translation Session" to connect</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Start Button -->
+                    <button id="startSessionBtn" class="btn btn-primary">Start Translation Session</button>
+                </div>
+            </section>
+
+            <!-- Communication Section -->
+            <section class="communication-section" id="communicationSection" style="display: none;">
+                <!-- Room Info -->
+                <div class="room-info">
+                    <div class="room-details">
+                        <span class="room-label">Room Code:</span>
+                        <input type="text" id="currentRoomCode" class="room-code-display" value="ABC123" readonly title="Click to select and copy">
+                        <button id="copyRoomCodeBtn" class="btn btn-small" title="Copy room code to clipboard">📋 Copy</button>
+                        <button id="shareRoomBtn" class="btn btn-small" title="Share room code with others">📤 Share</button>
+                    </div>
+                    <div class="users-info">
+                        <span id="userCount">1</span> users connected
+                    </div>
+                    <div class="room-instructions">
+                        <p><strong>🔗 Share this room code with the other user to connect</strong></p>
+                        <p><em>💡 Click the room code above to select it for easy copying</em></p>
+                    </div>
+                </div>
+
+                <!-- Translation Interface -->
+                <div class="translation-interface">
+                    <div class="user-panel">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                <span id="userFlag">🇺🇸</span>
+                            </div>
+                            <div class="user-details">
+                                <span id="userLanguageText">English Speaker</span>
+                                <div class="headset-status" id="headsetStatus">
+                                    <span class="headset-icon">🎧</span>
+                                    <span class="status-text">Connected</span>
+                                    <span class="battery-level" id="batteryLevel">85%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Voice Control -->
+                        <div class="voice-control">
+                            <button id="talkBtn" class="talk-btn">
+                                <span class="talk-icon">🎤</span>
+                                <span class="talk-text">Hold to Talk</span>
+                            </button>
+                            <div class="voice-indicator" id="voiceIndicator">
+                                <div class="voice-waves">
+                                    <div class="wave"></div>
+                                    <div class="wave"></div>
+                                    <div class="wave"></div>
+                                </div>
+                            </div>
+                            <div class="voice-instructions">
+                                <p><strong>Instructions:</strong></p>
+                                <ul>
+                                    <li>Click and hold the button to speak</li>
+                                    <li>Speak clearly in your selected language</li>
+                                    <li>Release the button when finished</li>
+                                    <li>Allow microphone access when prompted</li>
+                                </ul>
+                                <p><strong>⚠️ Requirements:</strong></p>
+                                <ul>
+                                    <li>Use Chrome, Edge, or Safari browser</li>
+                                    <li>Connect headset/microphone before starting</li>
+                                    <li>Ensure stable internet connection</li>
+                                    <li>Close other apps using microphone</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conversation Display -->
+                    <div class="conversation-display">
+                        <div class="conversation-header">
+                            <h3>Live Conversation</h3>
+                            <button id="clearConversationBtn" class="btn btn-small">Clear</button>
+                        </div>
+                        <div class="conversation-log" id="conversationLog">
+                            <div class="conversation-item welcome">
+                                <div class="message-content">
+                                    <p>Welcome! Start speaking to begin real-time translation.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Peer Panel -->
+                    <div class="peer-panel" id="peerPanel" style="display: none;">
+                        <div class="peer-info">
+                            <div class="peer-avatar">
+                                <span id="peerFlag">🇩🇪</span>
+                            </div>
+                            <div class="peer-details">
+                                <span id="peerLanguageText">German Speaker</span>
+                                <div class="peer-status" id="peerStatus">
+                                    <span class="status-indicator connected"></span>
+                                    <span class="status-text">Online</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Peer Voice Activity -->
+                        <div class="peer-voice-activity" id="peerVoiceActivity">
+                            <div class="voice-indicator">
+                                <div class="voice-waves">
+                                    <div class="wave"></div>
+                                    <div class="wave"></div>
+                                    <div class="wave"></div>
+                                </div>
+                            </div>
+                            <span class="activity-text">Listening...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="controls">
+                    <button id="muteBtn" class="btn btn-secondary">
+                        <span class="icon">🔊</span>
+                        <span class="text">Mute</span>
+                    </button>
+                    <button id="settingsBtn" class="btn btn-secondary">
+                        <span class="icon">⚙️</span>
+                        <span class="text">Settings</span>
+                    </button>
+                    <button id="leaveSessionBtn" class="btn btn-danger">
+                        <span class="icon">📞</span>
+                        <span class="text">Leave Session</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <button class="modal-close" id="closeSettingsBtn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-group">
+                        <label for="microphoneSelect">Microphone:</label>
+                        <select id="microphoneSelect" class="setting-select">
+                            <option value="">Default</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="speakerSelect">Speaker:</label>
+                        <select id="speakerSelect" class="setting-select">
+                            <option value="">Default</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="volumeSlider">Volume:</label>
+                        <input type="range" id="volumeSlider" class="setting-slider" min="0" max="100" value="80">
+                        <span id="volumeValue">80%</span>
+                    </div>
+                    <div class="setting-group">
+                        <label for="autoPlayToggle">Auto-play translations:</label>
+                        <input type="checkbox" id="autoPlayToggle" checked>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Toast -->
+        <div class="toast error-toast" id="errorToast">
+            <div class="toast-content">
+                <span class="toast-icon">⚠️</span>
+                <span class="toast-message" id="errorMessage">An error occurred</span>
+                <button class="toast-close" id="closeErrorBtn">&times;</button>
+            </div>
+        </div>
+
+        <!-- Success Toast -->
+        <div class="toast success-toast" id="successToast">
+            <div class="toast-content">
+                <span class="toast-icon">✅</span>
+                <span class="toast-message" id="successMessage">Action completed</span>
+                <button class="toast-close" id="closeSuccessBtn">&times;</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="dual-headset.js"></script>
+</body>
+</html>
