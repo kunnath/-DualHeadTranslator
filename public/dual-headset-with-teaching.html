@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Language Headset with Teaching Assistant</title>
+    <link rel="stylesheet" href="dual-headset.css">
+    <link rel="stylesheet" href="performance-ui.css">
+    <style>
+        /* Teaching Modal Styles */
+        .teaching-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .teaching-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .teaching-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .teaching-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .close-teaching {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-teaching:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .teaching-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .recent-translations {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .recent-translations h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .translation-item {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .translation-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+
+        .translation-item.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .translation-text {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .original-text {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .translated-text {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .translation-meta {
+            font-size: 0.8em;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+
+        .question-section {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            overflow: hidden;
+        }
+
+        .question-input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            font-size: 1em;
+            resize: none;
+            min-height: 80px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .question-input:focus {
+            outline: none;
+            border-bottom-color: #667eea;
+        }
+
+        .suggested-questions {
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .suggested-questions h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .question-chip {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin: 3px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .question-chip:hover {
+            background: #5a67d8;
+        }
+
+        .ask-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 15px 0;
+            align-self: flex-start;
+            transition: transform 0.2s;
+        }
+
+        .ask-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .ask-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .explanation-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #28a745;
+            white-space: pre-wrap;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+        }
+
+        .quick-tips {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .quick-tips h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+
+        .tip-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .tip-item:last-child {
+            border-bottom: none;
+        }
+
+        .teach-me-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .teach-me-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .teach-me-button .icon {
+            margin-right: 8px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 768px) {
+            .teaching-content {
+                width: 95%;
+                height: 90vh;
+                margin: 2.5% auto;
+            }
+            
+            .teach-me-button {
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎧 Dual Language Translation Headset</h1>
+            <div class="performance-indicator">
+                <span id="performanceStatus">Ready</span>
+                <div class="indicator-light" id="statusLight"></div>
+            </div>
+        </div>
+
+        <div class="headset-container">
+            <!-- User 1 (Left Side) -->
+            <div class="headset-side left-side">
+                <div class="headset-visual">
+                    <div class="headset-icon">🎧</div>
+                    <div class="user-label">User 1</div>
+                    <div class="language-badge" id="user1Language">English</div>
+                </div>
+                
+                <div class="controls">
+                    <select id="user1LanguageSelect" class="language-select">
+                        <option value="en">English</option>
+                        <option value="de">German</option>
+                    </select>
+                    
+                    <button id="user1Listen" class="listen-btn">
+                        <span class="btn-icon">🎤</span>
+                        <span class="btn-text">Listen</span>
+                    </button>
+                    
+                    <div class="input-section">
+                        <input type="text" id="user1Input" placeholder="Type message..." class="text-input">
+                        <button id="user1Send" class="send-btn">Send</button>
+                    </div>
+                </div>
+                
+                <div class="output-section">
+                    <div class="original-text" id="user1Original">Original text will appear here...</div>
+                    <div class="translated-text" id="user1Translated">Translated text will appear here...</div>
+                </div>
+            </div>
+
+            <!-- Connection Indicator -->
+            <div class="connection-indicator">
+                <div class="connection-line" id="connectionLine"></div>
+                <div class="connection-status" id="connectionStatus">Connecting...</div>
+                <div class="room-info" id="roomInfo">Room: Not connected</div>
+            </div>
+
+            <!-- User 2 (Right Side) -->
+            <div class="headset-side right-side">
+                <div class="headset-visual">
+                    <div class="headset-icon">🎧</div>
+                    <div class="user-label">User 2</div>
+                    <div class="language-badge" id="user2Language">German</div>
+                </div>
+                
+                <div class="controls">
+                    <select id="user2LanguageSelect" class="language-select">
+                        <option value="en">English</option>
+                        <option value="de" selected>German</option>
+                    </select>
+                    
+                    <button id="user2Listen" class="listen-btn">
+                        <span class="btn-icon">🎤</span>
+                        <span class="btn-text">Listen</span>
+                    </button>
+                    
+                    <div class="input-section">
+                        <input type="text" id="user2Input" placeholder="Nachricht eingeben..." class="text-input">
+                        <button id="user2Send" class="send-btn">Send</button>
+                    </div>
+                </div>
+                
+                <div class="output-section">
+                    <div class="original-text" id="user2Original">Original text will appear here...</div>
+                    <div class="translated-text" id="user2Translated">Translated text will appear here...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Stats -->
+        <div class="stats-container">
+            <div class="stat-item">
+                <span class="stat-label">Response Time:</span>
+                <span class="stat-value" id="responseTime">--ms</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Cache Hits:</span>
+                <span class="stat-value" id="cacheHits">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total Translations:</span>
+                <span class="stat-value" id="totalTranslations">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Connection Quality:</span>
+                <span class="stat-value" id="connectionQuality">Good</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teach Me Button -->
+    <button class="teach-me-button" id="teachMeButton">
+        <span class="icon">📚</span>
+        Teach Me
+    </button>
+
+    <!-- Teaching Modal -->
+    <div id="teachingModal" class="teaching-modal">
+        <div class="teaching-content">
+            <div class="teaching-header">
+                <h2>📚 Grammar & Language Teaching Assistant</h2>
+                <button class="close-teaching" id="closeTeaching">&times;</button>
+            </div>
+            
+            <div class="teaching-body">
+                <!-- Recent Translations Section -->
+                <div class="recent-translations">
+                    <h3>Recent Translations</h3>
+                    <div id="recentTranslationsList">
+                        <p>No recent translations available. Start translating to see them here!</p>
+                    </div>
+                </div>
+
+                <!-- Question Section -->
+                <div class="question-section">
+                    <textarea 
+                        id="grammarQuestion" 
+                        class="question-input" 
+                        placeholder="Ask about grammar, word usage, articles, tenses, or any language question about the selected translation..."
+                        disabled
+                    ></textarea>
+                    
+                    <div class="suggested-questions">
+                        <h4>Suggested Questions</h4>
+                        <div id="suggestedQuestions">
+                            <span class="question-chip">Select a translation first</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="askGrammarQuestion" class="ask-button" disabled>
+                    Ask Question
+                </button>
+
+                <!-- Explanation Section -->
+                <div id="explanationSection" style="display: none;">
+                    <div class="explanation-section" id="grammarExplanation"></div>
+                </div>
+
+                <!-- Quick Tips -->
+                <div class="quick-tips" id="quickTips" style="display: none;">
+                    <h4>💡 Quick Language Tips</h4>
+                    <div id="tipsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="optimized-translation-client.js"></script>
+    <script>
+        // Teaching Assistant functionality
+        class TeachingAssistant {
+            constructor() {
+                this.selectedTranslation = null;
+                this.recentTranslations = [];
+                this.isModalOpen = false;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.setupSocketListeners();
+            }
+
+            initializeElements() {
+                this.teachMeButton = document.getElementById('teachMeButton');
+                this.modal = document.getElementById('teachingModal');
+                this.closeButton = document.getElementById('closeTeaching');
+                this.recentTranslationsList = document.getElementById('recentTranslationsList');
+                this.grammarQuestion = document.getElementById('grammarQuestion');
+                this.askButton = document.getElementById('askGrammarQuestion');
+                this.suggestedQuestions = document.getElementById('suggestedQuestions');
+                this.explanationSection = document.getElementById('explanationSection');
+                this.grammarExplanation = document.getElementById('grammarExplanation');
+                this.quickTips = document.getElementById('quickTips');
+                this.tipsList = document.getElementById('tipsList');
+            }
+
+            setupEventListeners() {
+                this.teachMeButton.addEventListener('click', () => this.openModal());
+                this.closeButton.addEventListener('click', () => this.closeModal());
+                this.modal.addEventListener('click', (e) => {
+                    if (e.target === this.modal) this.closeModal();
+                });
+
+                this.askButton.addEventListener('click', () => this.askQuestion());
+                
+                this.grammarQuestion.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                        this.askQuestion();
+                    }
+                });
+
+                // Escape key to close modal
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.isModalOpen) {
+                        this.closeModal();
+                    }
+                });
+            }
+
+            setupSocketListeners() {
+                socket.on('recent-translations', (data) => {
+                    this.handleRecentTranslations(data);
+                });
+
+                socket.on('grammar-explanation', (data) => {
+                    this.handleGrammarExplanation(data);
+                });
+
+                socket.on('quick-tips', (data) => {
+                    this.handleQuickTips(data);
+                });
+
+                socket.on('teaching-error', (data) => {
+                    this.handleError(data.error);
+                });
+            }
+
+            openModal() {
+                this.isModalOpen = true;
+                this.modal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+                
+                // Request recent translations
+                socket.emit('get-recent-translations', { limit: 10 });
+                
+                // Request quick tips
+                socket.emit('get-quick-tips', {});
+            }
+
+            closeModal() {
+                this.isModalOpen = false;
+                this.modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                
+                // Clear explanation
+                this.explanationSection.style.display = 'none';
+                this.grammarQuestion.value = '';
+                this.selectedTranslation = null;
+                this.updateUIState();
+            }
+
+            handleRecentTranslations(data) {
+                if (data.success && data.translations.length > 0) {
+                    this.recentTranslations = data.translations;
+                    this.renderRecentTranslations();
+                } else {
+                    this.recentTranslationsList.innerHTML = 
+                        '<p>No recent translations available. Start translating to see them here!</p>';
+                }
+            }
+
+            renderRecentTranslations() {
+                this.recentTranslationsList.innerHTML = this.recentTranslations.map(translation => `
+                    <div class="translation-item" data-id="${translation.id}">
+                        <div class="translation-text">
+                            <div class="original-text">${this.escapeHtml(translation.originalText)}</div>
+                            <div class="translated-text">${this.escapeHtml(translation.translatedText)}</div>
+                        </div>
+                        <div class="translation-meta">
+                            ${translation.sourceLanguage} → ${translation.targetLanguage} • 
+                            ${new Date(translation.timestamp).toLocaleTimeString()}
+                        </div>
+                    </div>
+                `).join('');
+
+                // Add click handlers
+                this.recentTranslationsList.querySelectorAll('.translation-item').forEach(item => {
+                    item.addEventListener('click', () => this.selectTranslation(item));
+                });
+            }
+
+            selectTranslation(element) {
+                // Remove previous selection
+                this.recentTranslationsList.querySelectorAll('.translation-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+
+                // Select new item
+                element.classList.add('selected');
+                
+                const translationId = parseInt(element.dataset.id);
+                this.selectedTranslation = this.recentTranslations.find(t => t.id === translationId);
+                
+                this.updateUIState();
+                this.generateSuggestedQuestions();
+            }
+
+            updateUIState() {
+                const hasSelection = this.selectedTranslation !== null;
+                this.grammarQuestion.disabled = !hasSelection;
+                this.askButton.disabled = !hasSelection || !this.grammarQuestion.value.trim();
+                
+                if (hasSelection) {
+                    this.grammarQuestion.placeholder = `Ask about: "${this.selectedTranslation.originalText}" → "${this.selectedTranslation.translatedText}"`;
+                } else {
+                    this.grammarQuestion.placeholder = "Select a translation first to ask questions about it...";
+                }
+            }
+
+            generateSuggestedQuestions() {
+                if (!this.selectedTranslation) return;
+
+                const questions = [
+                    `What is the grammar structure of "${this.selectedTranslation.originalText}"?`,
+                    `Why was "${this.selectedTranslation.originalText}" translated as "${this.selectedTranslation.translatedText}"?`,
+                    `What are the verb tenses used in this sentence?`,
+                    `Can you explain the word order in this translation?`,
+                    `What articles are used and why?`
+                ];
+
+                // Add language-specific questions
+                if (this.selectedTranslation.targetLanguage === 'de') {
+                    questions.push(
+                        `What is the gender of the nouns in "${this.selectedTranslation.translatedText}"?`,
+                        `What case are the nouns in this German sentence?`
+                    );
+                }
+
+                this.suggestedQuestions.innerHTML = questions.slice(0, 5).map(question => 
+                    `<span class="question-chip" data-question="${this.escapeHtml(question)}">${question}</span>`
+                ).join('');
+
+                // Add click handlers for suggested questions
+                this.suggestedQuestions.querySelectorAll('.question-chip').forEach(chip => {
+                    chip.addEventListener('click', () => {
+                        this.grammarQuestion.value = chip.dataset.question;
+                        this.updateUIState();
+                    });
+                });
+            }
+
+            askQuestion() {
+                if (!this.selectedTranslation || !this.grammarQuestion.value.trim()) return;
+
+                const question = this.grammarQuestion.value.trim();
+                
+                // Show loading state
+                this.askButton.disabled = true;
+                this.askButton.innerHTML = '<span class="loading-spinner"></span>Thinking...';
+
+                socket.emit('ask-grammar-question', {
+                    question: question,
+                    translationId: this.selectedTranslation.id
+                });
+            }
+
+            handleGrammarExplanation(data) {
+                // Reset button state
+                this.askButton.disabled = false;
+                this.askButton.innerHTML = 'Ask Question';
+
+                if (data.success) {
+                    this.grammarExplanation.textContent = data.explanation;
+                    this.explanationSection.style.display = 'block';
+                    
+                    // Scroll to explanation
+                    this.explanationSection.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    this.handleError('Failed to generate explanation');
+                }
+            }
+
+            handleQuickTips(data) {
+                if (data.success && data.tips.length > 0) {
+                    this.tipsList.innerHTML = data.tips.map(tip => 
+                        `<div class="tip-item">${this.escapeHtml(tip)}</div>`
+                    ).join('');
+                    this.quickTips.style.display = 'block';
+                }
+            }
+
+            handleError(error) {
+                // Reset button state if it was loading
+                this.askButton.disabled = false;
+                this.askButton.innerHTML = 'Ask Question';
+
+                // Show error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = `Error: ${error}`;
+                
+                // Insert after question section
+                const questionSection = document.querySelector('.question-section');
+                questionSection.parentNode.insertBefore(errorDiv, questionSection.nextSibling);
+                
+                // Remove error after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.parentNode.removeChild(errorDiv);
+                    }
+                }, 5000);
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // Initialize teaching assistant when page loads
+        let teachingAssistant;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            teachingAssistant = new TeachingAssistant();
+        });
+
+        // Update grammar question button state when typing
+        document.addEventListener('DOMContentLoaded', () => {
+            const grammarQuestion = document.getElementById('grammarQuestion');
+            const askButton = document.getElementById('askGrammarQuestion');
+            
+            grammarQuestion.addEventListener('input', () => {
+                if (teachingAssistant) {
+                    teachingAssistant.updateUIState();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

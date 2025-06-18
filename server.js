@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { VoiceTranslator } from './src/services/VoiceTranslator.js';
 import { TranslationService } from './src/services/TranslationService.js';
 import { FastTranslationService } from './src/services/FastTranslationService.js';
+import { GrammarTeachingService } from './src/services/GrammarTeachingService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +31,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const voiceTranslator = new VoiceTranslator();
 const translationService = new TranslationService();
 const fastTranslationService = new FastTranslationService();
+const grammarTeachingService = new GrammarTeachingService();
 
 // Warm up the fast translation service for better initial performance
 fastTranslationService.warmUp().catch(console.warn);
@@ -51,8 +53,16 @@ app.get('/dual-headset', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dual-headset.html'));
 });
 
+app.get('/teaching', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dual-headset-with-teaching.html'));
+});
+
 app.get('/optimized', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'optimized-dual-headset.html'));
+});
+
+app.get('/live-chat', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'live-chat-with-teaching.html'));
 });
 
 app.get('/api/room-status/:roomId', (req, res) => {
@@ -307,9 +317,126 @@ io.on('connection', (socket) => {
         }
       });
       
+      // Store translation for teaching service
+      grammarTeachingService.storeTranslation(
+        socket.id,
+        result.originalText,
+        result.translatedText,
+        sourceLanguage,
+        targetLanguage
+      );
+      
     } catch (error) {
       console.error('Fast translation error:', error);
       socket.emit('translation-error', { error: error.message });
+    }
+  });
+
+  // Grammar teaching handlers
+  socket.on('get-recent-translations', (data) => {
+    try {
+      const { limit = 5 } = data;
+      const recentTranslations = grammarTeachingService.getRecentTranslations(socket.id, limit);
+      
+      socket.emit('recent-translations', {
+        translations: recentTranslations,
+        success: true
+      });
+      
+    } catch (error) {
+      console.error('Error getting recent translations:', error);
+      socket.emit('teaching-error', { error: error.message });
+    }
+  });
+
+  socket.on('ask-grammar-question', async (data) => {
+    try {
+      const { question, translationId } = data;
+      
+      // Get recent translations to find the context
+      const recentTranslations = grammarTeachingService.getRecentTranslations(socket.id);
+      const translationContext = recentTranslations.find(t => t.id === translationId);
+      
+      if (!translationContext) {
+        socket.emit('teaching-error', { error: 'Translation context not found' });
+        return;
+      }
+      
+      console.log(`📚 Grammar question: "${question}" for translation: "${translationContext.originalText}"`);
+      
+      // Get suggested questions for this translation
+      const suggestedQuestions = grammarTeachingService.getSuggestedQuestions(translationContext);
+      
+      // Generate teaching explanation
+      const explanation = await grammarTeachingService.generateTeachingExplanation(
+        question, 
+        translationContext
+      );
+      
+      socket.emit('grammar-explanation', {
+        question,
+        explanation,
+        translationContext,
+        suggestedQuestions,
+        timestamp: Date.now(),
+        success: true
+      });
+      
+    } catch (error) {
+      console.error('Error generating grammar explanation:', error);
+      socket.emit('teaching-error', { error: error.message });
+    }
+  });
+
+  socket.on('get-quick-tips', (data) => {
+    try {
+      const { language } = data;
+      const userSession = userSessions.get(socket.id);
+      const targetLanguage = language || userSession?.language || 'en';
+      
+      const tips = grammarTeachingService.getQuickTips(targetLanguage);
+      
+      socket.emit('quick-tips', {
+        language: targetLanguage,
+        tips,
+        success: true
+      });
+      
+    } catch (error) {
+      console.error('Error getting quick tips:', error);
+      socket.emit('teaching-error', { error: error.message });
+    }
+  });
+  
+  // Fast teaching request handler for live chat messages
+  socket.on('request-teaching', async (data) => {
+    try {
+      const { messageId, text, originalText, language, roomId } = data;
+      
+      console.log(`⚡ Fast teaching request for: "${text}" (${language})`);
+      
+      // Use fast grammar analysis for immediate response
+      const explanation = await grammarTeachingService.generateFastTeachingExplanation(
+        text, 
+        language, 
+        language === 'en' ? 'de' : 'en'
+      );
+      
+      socket.emit('teaching-response', {
+        messageId,
+        text,
+        explanation,
+        responseTime: explanation.responseTime,
+        timestamp: Date.now(),
+        success: true
+      });
+      
+    } catch (error) {
+      console.error('Fast teaching error:', error);
+      socket.emit('teaching-error', { 
+        error: error.message,
+        messageId: data?.messageId
+      });
     }
   });
 
@@ -430,11 +557,24 @@ io.on('connection', (socket) => {
       
       userSessions.delete(socket.id);
     }
+    
+    // Note: Teaching service data will be cleaned up automatically by the cleanup routine
+    // We don't immediately delete it in case user reconnects quickly
   });
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Cleanup old teaching data every hour
+setInterval(() => {
+  console.log('🧹 Cleaning up old teaching data...');
+  grammarTeachingService.clearOldTranslations(24); // Clear data older than 24 hours
+}, 60 * 60 * 1000); // Every hour
+
 server.listen(PORT, () => {
   console.log(`🚀 Voice Translator Server running on port ${PORT}`);
   console.log(`📱 Web interface: http://localhost:${PORT}`);
+  console.log(`🎧 Dual headset: http://localhost:${PORT}/dual-headset`);
+  console.log(`📚 With teaching: http://localhost:${PORT}/teaching`);
+  console.log(`⚡ Optimized: http://localhost:${PORT}/optimized`);
 });

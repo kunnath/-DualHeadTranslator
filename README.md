@@ -78,6 +78,103 @@ A modern, real-time voice translation application that enables seamless communic
 ### Keyboard Shortcuts
 - **Spacebar**: Hold to record (same as mouse/touch)
 
+## 🚀 Available Interfaces
+
+### 1. 🎤 Simple Translator (`http://localhost:3000/`)
+- Basic voice translation interface
+- Single-user translation testing
+- Simple and straightforward
+
+### 2. 🎧 Dual Headset (`http://localhost:3000/dual-headset`)
+- Real-time conversation between two users
+- Room-based communication
+- Original headset-optimized interface
+
+### 3. 🚀 Optimized Version (`http://localhost:3000/optimized`)
+- High-performance translation with caching
+- Multi-tier translation architecture
+- 60-99% performance improvement
+- Real-time performance metrics
+
+### 4. 💬 Live Chat + Teaching (`http://localhost:3000/live-chat`) **NEW!**
+- **Conversation history in chat format**
+- **"Teach Me" button on each message**
+- **Grammar, tense, and article analysis**
+- **Word-by-word breakdown with meanings**
+- **Interactive language learning**
+
+## 📚 Teaching Feature Details
+
+### What You Learn
+When you click "📚 Teach Me" on any message, you get:
+
+#### 📝 Grammar Analysis
+- Sentence structure breakdown
+- Subject, verb, object identification
+- Grammar rules explanation
+- Common patterns and exceptions
+
+#### ⏰ Tense Information
+- Present, past, future tense identification
+- Perfect and progressive forms
+- When and how to use each tense
+- Conjugation patterns
+
+#### 📚 Articles & Usage (German)
+- Der, die, das rules and exceptions
+- Nominative, accusative, dative, genitive cases
+- When to use definite vs indefinite articles
+- Common article patterns
+
+#### 💡 Usage Tips
+- Formal vs informal language
+- Common phrases and idioms
+- Cultural context
+- Alternative ways to express the same idea
+
+#### 🔤 Word Breakdown
+- Individual word meanings
+- Word types (noun, verb, adjective, etc.)
+- Etymology and related words
+- Usage examples
+
+### Example Teaching Session
+```
+User says: "Ich möchte einen Kaffee, bitte."
+Translation: "I would like a coffee, please."
+
+Teaching Analysis:
+📝 Grammar: Polite request using "möchte" (would like)
+⏰ Tense: Conditional/polite form of "mögen"
+📚 Articles: "einen" = accusative masculine article for "Kaffee"
+💡 Usage: Polite way to order in German
+🔤 Words: ich (I), möchte (would like), einen (a/an), Kaffee (coffee), bitte (please)
+```
+
+## 🎯 Quick Start Guide
+
+## 🆕 New Feature: Live Chat with In-Message Teaching
+
+### What's New?
+- **Live Conversation History**: See all translated messages in a chat-like interface
+- **In-Chat Teaching Buttons**: Click "📚 Teach Me" on any message to get detailed grammar analysis
+- **Message-Specific Learning**: Each teaching session focuses on the specific sentence you clicked
+- **Real-time Learning**: Learn grammar, tenses, articles, and word usage instantly
+
+### How It Works
+1. **Join a conversation** using the Live Chat interface
+2. **Speak and translate** messages appear in chat format
+3. **Click "Teach Me"** on any message bubble to learn about that specific sentence
+4. **Get detailed analysis** including:
+   - Grammar structure and rules
+   - Tense identification and usage
+   - Articles (der, die, das) and their rules
+   - Word-by-word breakdown with meanings
+   - Usage tips and examples
+
+### Available Interfaces
+- The Live Chat with Teaching feature is available in the **Teaching-Enhanced Interface** and the **Optimized Interface**.
+
 ## 🏗️ Architecture
 
 ### Frontend Components
