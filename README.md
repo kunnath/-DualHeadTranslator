@@ -112,6 +112,8 @@ A modern, real-time voice translation application that enables seamless communic
 ### What You Learn
 When you click "📚 Teach Me" on any message, you get:
 
+![Live Teach Me Interface](3.png)
+
 #### 📝 Grammar Analysis
 - Sentence structure breakdown
 - Subject, verb, object identification
