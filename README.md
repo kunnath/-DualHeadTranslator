@@ -143,7 +143,8 @@ When you click "📚 Teach Me" on any message, you get:
 - Word types (noun, verb, adjective, etc.)
 - Etymology and related words
 - Usage examples
-
+![Word Breakdown Interface](4.png)
+![Word Breakdown Interface](5.png)
 ### Example Teaching Session
 ```
 User says: "Ich möchte einen Kaffee, bitte."
