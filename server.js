@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { VoiceTranslator } from './src/services/VoiceTranslator.js';
 import { TranslationService } from './src/services/TranslationService.js';
+import { FastTranslationService } from './src/services/FastTranslationService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,6 +29,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Initialize services
 const voiceTranslator = new VoiceTranslator();
 const translationService = new TranslationService();
+const fastTranslationService = new FastTranslationService();
+
+// Warm up the fast translation service for better initial performance
+fastTranslationService.warmUp().catch(console.warn);
 
 // Configure multer for audio uploads
 const upload = multer({
@@ -44,6 +49,10 @@ app.get('/', (req, res) => {
 
 app.get('/dual-headset', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dual-headset.html'));
+});
+
+app.get('/optimized', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'optimized-dual-headset.html'));
 });
 
 app.get('/api/room-status/:roomId', (req, res) => {
@@ -70,7 +79,7 @@ app.get('/api/room-status/:roomId', (req, res) => {
   });
 });
 
-// New route for text-only translation using Ollama
+// Enhanced route for high-performance text translation
 app.post('/api/translate-text', async (req, res) => {
   try {
     const { text, sourceLanguage, targetLanguage } = req.body;
@@ -79,20 +88,22 @@ app.post('/api/translate-text', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: text, sourceLanguage, targetLanguage' });
     }
 
-    console.log(`🔄 Text translation request: "${text}" (${sourceLanguage} -> ${targetLanguage})`);
+    console.log(`� Fast translation request: "${text}" (${sourceLanguage} -> ${targetLanguage})`);
 
-    // Use VoiceTranslator for text translation
-    const result = await voiceTranslator.processTextTranslation(text, sourceLanguage, targetLanguage);
+    // Use FastTranslationService for optimal performance
+    const translatedText = await fastTranslationService.translateText(text, sourceLanguage, targetLanguage);
 
     res.json({
-      originalText: result.originalText,
-      translatedText: result.translatedText,
+      originalText: text.trim(),
+      translatedText: translatedText.trim(),
       success: true,
-      timestamp: result.timestamp
+      timestamp: Date.now(),
+      sourceLanguage,
+      targetLanguage
     });
 
   } catch (error) {
-    console.error('Text translation error:', error);
+    console.error('Fast translation error:', error);
     res.status(500).json({ 
       error: 'Translation failed', 
       details: error.message 
@@ -112,8 +123,8 @@ app.post('/api/translate-audio', upload.single('audio'), async (req, res) => {
     // Convert speech to text
     const transcribedText = await voiceTranslator.speechToText(audioBuffer, sourceLanguage);
     
-    // Translate text
-    const translatedText = await translationService.translateText(
+    // Use fast translation service for better performance
+    const translatedText = await fastTranslationService.translateText(
       transcribedText, 
       sourceLanguage, 
       targetLanguage
@@ -133,6 +144,42 @@ app.post('/api/translate-audio', upload.single('audio'), async (req, res) => {
     console.error('Translation error:', error);
     res.status(500).json({ 
       error: 'Translation failed', 
+      details: error.message 
+    });
+  }
+});
+
+// Performance monitoring endpoint
+app.get('/api/performance-metrics', (req, res) => {
+  try {
+    const metrics = fastTranslationService.getPerformanceMetrics();
+    res.json({
+      success: true,
+      metrics: metrics,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error getting performance metrics:', error);
+    res.status(500).json({ 
+      error: 'Failed to retrieve performance metrics',
+      details: error.message 
+    });
+  }
+});
+
+// Cache management endpoint
+app.post('/api/clear-cache', (req, res) => {
+  try {
+    fastTranslationService.clearCache();
+    res.json({
+      success: true,
+      message: 'Translation cache cleared successfully',
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error clearing cache:', error);
+    res.status(500).json({ 
+      error: 'Failed to clear cache',
       details: error.message 
     });
   }
@@ -193,7 +240,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // New handler for text-based translation (client-side STT + Ollama translation)
+  // Optimized handler for text-based translation with caching and fast APIs
   socket.on('text-translation', async (data) => {
     try {
       const { text, roomId, timestamp } = data;
@@ -207,14 +254,23 @@ io.on('connection', (socket) => {
       const sourceLanguage = userSession.language;
       const targetLanguage = sourceLanguage === 'en' ? 'de' : 'en';
       
-      console.log(`🔄 Text translation: "${text}" (${sourceLanguage} -> ${targetLanguage})`);
+      console.log(`� Fast text translation: "${text}" (${sourceLanguage} -> ${targetLanguage})`);
       
-      // Process text translation using Ollama
-      const result = await voiceTranslator.processTextTranslation(
+      // Use FastTranslationService for optimal performance
+      const translatedText = await fastTranslationService.translateText(
         text, 
         sourceLanguage, 
         targetLanguage
       );
+      
+      const result = {
+        originalText: text.trim(),
+        translatedText: translatedText.trim(),
+        success: true,
+        timestamp: Date.now(),
+        sourceLanguage,
+        targetLanguage
+      };
       
       // Get room and target users
       const room = activeRooms.get(roomId);
@@ -231,7 +287,11 @@ io.on('connection', (socket) => {
             translatedText: result.translatedText,
             fromUser: socket.id,
             fromLanguage: sourceLanguage,
-            timestamp: timestamp || Date.now()
+            timestamp: timestamp || Date.now(),
+            performance: {
+              cached: result.cached || false,
+              responseTime: Date.now() - (timestamp || Date.now())
+            }
           });
         }
       });
@@ -239,12 +299,16 @@ io.on('connection', (socket) => {
       // Echo back original to sender for confirmation
       socket.emit('text-echo', {
         originalText: result.originalText,
+        translatedText: result.translatedText,
         processed: true,
-        timestamp: timestamp || Date.now()
+        timestamp: timestamp || Date.now(),
+        performance: {
+          responseTime: Date.now() - (timestamp || Date.now())
+        }
       });
       
     } catch (error) {
-      console.error('Text translation error:', error);
+      console.error('Fast translation error:', error);
       socket.emit('translation-error', { error: error.message });
     }
   });

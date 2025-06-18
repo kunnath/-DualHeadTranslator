@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimized Dual Headset Translator</title>
+    <link rel="stylesheet" href="dual-headset.css">
+    <link rel="stylesheet" href="performance-ui.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="optimized-translation-client.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header with Performance Indicator -->
+        <header class="header">
+            <h1>🚀 Optimized Dual Headset Translator</h1>
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Connecting...</span>
+                <span class="performance-indicator" id="performanceIndicator"></span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Setup Section -->
+            <section class="setup-section" id="setupSection">
+                <div class="setup-card">
+                    <h2>🎧 Setup Your Device</h2>
+                    
+                    <!-- Language Selection -->
+                    <div class="language-selection">
+                        <h3>Select Your Language <span class="required">*</span></h3>
+                        <div class="language-options">
+                            <label class="language-option">
+                                <input type="radio" name="userLanguage" value="en" checked required>
+                                <span class="option-content">
+                                    <span class="flag">🇺🇸</span>
+                                    <span class="language-name">English</span>
+                                </span>
+                            </label>
+                            <label class="language-option">
+                                <input type="radio" name="userLanguage" value="de" required>
+                                <span class="option-content">
+                                    <span class="flag">🇩🇪</span>
+                                    <span class="language-name">German</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Device Type Selection -->
+                    <div class="device-selection">
+                        <h3>Device Type <span class="required">*</span></h3>
+                        <div class="device-options">
+                            <label class="device-option">
+                                <input type="radio" name="deviceType" value="headset" checked required>
+                                <span class="option-content">
+                                    <span class="icon">🎧</span>
+                                    <span class="device-name">Headset</span>
+                                </span>
+                            </label>
+                            <label class="device-option">
+                                <input type="radio" name="deviceType" value="mobile" required>
+                                <span class="option-content">
+                                    <span class="icon">📱</span>
+                                    <span class="device-name">Mobile</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Room ID Input -->
+                    <div class="room-input">
+                        <h3>Room ID <span class="required">*</span></h3>
+                        <input type="text" id="roomIdInput" placeholder="Enter shared room ID" required>
+                        <small>Share this ID with the other person to connect</small>
+                    </div>
+
+                    <!-- Performance Settings -->
+                    <div class="performance-settings">
+                        <h3>⚡ Performance Settings</h3>
+                        <div class="control-panel">
+                            <div class="control-row">
+                                <span class="control-label">Enable Text-to-Speech</span>
+                                <input type="checkbox" id="enableTTS" checked>
+                            </div>
+                            <div class="control-row">
+                                <span class="control-label">High Performance Mode</span>
+                                <input type="checkbox" id="highPerformanceMode" checked>
+                            </div>
+                            <div class="control-row">
+                                <span class="control-label">Speech Confidence Threshold</span>
+                                <input type="range" id="confidenceThreshold" min="0.1" max="1.0" step="0.1" value="0.7">
+                                <span id="confidenceValue">0.7</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Join Button -->
+                    <button id="joinRoomBtn" class="join-btn">
+                        <span class="btn-text">🚀 Start Optimized Translation</span>
+                        <span class="btn-icon">→</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Translation Section -->
+            <section class="translation-section" id="translationSection" style="display: none;">
+                <!-- Translation Status -->
+                <div class="translation-status" id="translationStatus"></div>
+
+                <!-- Performance Metrics -->
+                <div class="performance-metrics" id="performanceMetrics">
+                    <div class="metric">Initializing...</div>
+                </div>
+
+                <!-- Translation Display -->
+                <div class="translation-container">
+                    <div class="translation-box original">
+                        <h3>
+                            Your Speech
+                            <span class="language-tag" id="originalLanguageTag">🇺🇸 EN</span>
+                        </h3>
+                        <div class="translation-text" id="originalText">
+                            Speak into your microphone...
+                        </div>
+                    </div>
+                    
+                    <div class="translation-box translated">
+                        <h3>
+                            Translation
+                            <span class="language-tag" id="translatedLanguageTag">🇩🇪 DE</span>
+                        </h3>
+                        <div class="translation-text" id="translatedText">
+                            Translation will appear here...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voice Activity Indicator -->
+                <div class="voice-activity" id="voiceActivity">
+                    <div class="activity-indicator" id="activityIndicator"></div>
+                    <span id="activityText">Listening...</span>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="control-buttons">
+                    <button id="startListeningBtn" class="control-btn primary">
+                        <span class="btn-icon">🎤</span>
+                        <span class="btn-text">Start Listening</span>
+                    </button>
+                    
+                    <button id="stopListeningBtn" class="control-btn secondary" style="display: none;">
+                        <span class="btn-icon">⏹️</span>
+                        <span class="btn-text">Stop Listening</span>
+                    </button>
+                    
+                    <button id="clearCacheBtn" class="control-btn tertiary">
+                        <span class="btn-icon">🗑️</span>
+                        <span class="btn-text">Clear Cache</span>
+                    </button>
+                    
+                    <button id="leaveRoomBtn" class="control-btn danger">
+                        <span class="btn-icon">🚪</span>
+                        <span class="btn-text">Leave Room</span>
+                    </button>
+                </div>
+
+                <!-- Advanced Performance Monitor -->
+                <details class="advanced-monitor">
+                    <summary>📊 Advanced Performance Monitor</summary>
+                    <div class="monitor-content">
+                        <div class="monitor-grid">
+                            <div class="monitor-item">
+                                <span class="monitor-label">Cache Hit Rate</span>
+                                <span class="monitor-value" id="cacheHitRate">--</span>
+                            </div>
+                            <div class="monitor-item">
+                                <span class="monitor-label">Avg Response Time</span>
+                                <span class="monitor-value" id="avgResponseTime">--</span>
+                            </div>
+                            <div class="monitor-item">
+                                <span class="monitor-label">Queue Size</span>
+                                <span class="monitor-value" id="queueSize">--</span>
+                            </div>
+                            <div class="monitor-item">
+                                <span class="monitor-label">API Status</span>
+                                <span class="monitor-value" id="apiStatus">--</span>
+                            </div>
+                        </div>
+                        <button id="refreshStatsBtn" class="refresh-btn">🔄 Refresh Stats</button>
+                    </div>
+                </details>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>🚀 Optimized for ultra-fast translation with intelligent caching</p>
+            <p>Performance: Multi-tier translation with 200ms-3s response times</p>
+        </footer>
+    </div>
+
+    <script>
+        let socket;
+        let optimizedTranslationClient;
+        let recognition;
+        let userLanguage = 'en';
+        let deviceType = 'headset';
+        let roomId = '';
+        let isListening = false;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            initializeSocket();
+            updateConfidenceDisplay();
+        });
+
+        function initializeEventListeners() {
+            // Setup form handlers
+            document.getElementById('joinRoomBtn').addEventListener('click', joinRoom);
+            document.getElementById('startListeningBtn').addEventListener('click', startListening);
+            document.getElementById('stopListeningBtn').addEventListener('click', stopListening);
+            document.getElementById('leaveRoomBtn').addEventListener('click', leaveRoom);
+            document.getElementById('clearCacheBtn').addEventListener('click', clearCache);
+            document.getElementById('refreshStatsBtn').addEventListener('click', refreshStats);
+
+            // Confidence threshold display
+            document.getElementById('confidenceThreshold').addEventListener('input', updateConfidenceDisplay);
+
+            // Language change handler
+            document.querySelectorAll('input[name="userLanguage"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    userLanguage = this.value;
+                    updateLanguageTags();
+                });
+            });
+
+            // Device type change handler
+            document.querySelectorAll('input[name="deviceType"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    deviceType = this.value;
+                });
+            });
+        }
+
+        function initializeSocket() {
+            socket = io();
+            
+            socket.on('connect', function() {
+                updateConnectionStatus('Connected', 'connected');
+            });
+
+            socket.on('disconnect', function() {
+                updateConnectionStatus('Disconnected', 'disconnected');
+            });
+
+            socket.on('room-joined', function(data) {
+                console.log('Room joined successfully:', data);
+                updateConnectionStatus('In Room', 'in-room');
+                showTranslationSection();
+                
+                // Initialize optimized translation client
+                optimizedTranslationClient = new OptimizedTranslationClient(socket, roomId, userLanguage);
+                
+                // Update performance metrics every 5 seconds
+                setInterval(updatePerformanceDisplay, 5000);
+            });
+
+            socket.on('user-joined', function(data) {
+                console.log('User joined:', data);
+                showNotification(`User joined the room (${data.language})`, 'info');
+            });
+
+            socket.on('user-left', function(data) {
+                console.log('User left:', data);
+                showNotification(`User left the room`, 'info');
+            });
+        }
+
+        function joinRoom() {
+            roomId = document.getElementById('roomIdInput').value.trim();
+            
+            if (!roomId) {
+                alert('Please enter a room ID');
+                return;
+            }
+
+            userLanguage = document.querySelector('input[name="userLanguage"]:checked').value;
+            deviceType = document.querySelector('input[name="deviceType"]:checked').value;
+
+            console.log(`Joining room: ${roomId} as ${userLanguage} user with ${deviceType}`);
+
+            socket.emit('join-room', {
+                roomId: roomId,
+                userLanguage: userLanguage,
+                deviceType: deviceType
+            });
+        }
+
+        function showTranslationSection() {
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('translationSection').style.display = 'block';
+            updateLanguageTags();
+            initializeSpeechRecognition();
+        }
+
+        function updateLanguageTags() {
+            const originalTag = document.getElementById('originalLanguageTag');
+            const translatedTag = document.getElementById('translatedLanguageTag');
+            
+            if (userLanguage === 'en') {
+                originalTag.textContent = '🇺🇸 EN';
+                translatedTag.textContent = '🇩🇪 DE';
+            } else {
+                originalTag.textContent = '🇩🇪 DE';
+                translatedTag.textContent = '🇺🇸 EN';
+            }
+        }
+
+        function initializeSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = userLanguage === 'en' ? 'en-US' : 'de-DE';
+
+                recognition.onresult = function(event) {
+                    let finalTranscript = '';
+                    let interimTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        const confidence = event.results[i][0].confidence;
+
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                            
+                            // Use optimized translation client
+                            if (optimizedTranslationClient && finalTranscript.trim()) {
+                                optimizedTranslationClient.handleSpeechResult(finalTranscript, confidence);
+                            }
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+
+                    // Update UI with interim results
+                    const originalElement = document.getElementById('originalText');
+                    if (finalTranscript) {
+                        originalElement.textContent = finalTranscript;
+                    } else if (interimTranscript) {
+                        originalElement.textContent = interimTranscript + '...';
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    if (optimizedTranslationClient) {
+                        optimizedTranslationClient.showTranslationStatus(`Speech Error: ${event.error}`, 'error');
+                    }
+                };
+
+                recognition.onend = function() {
+                    if (isListening) {
+                        // Restart if we're supposed to be listening
+                        setTimeout(() => {
+                            if (isListening) {
+                                recognition.start();
+                            }
+                        }, 100);
+                    }
+                };
+            } else {
+                alert('Speech recognition not supported in this browser');
+            }
+        }
+
+        function startListening() {
+            if (recognition) {
+                isListening = true;
+                recognition.start();
+                updateVoiceActivity(true);
+                
+                document.getElementById('startListeningBtn').style.display = 'none';
+                document.getElementById('stopListeningBtn').style.display = 'inline-flex';
+                
+                if (optimizedTranslationClient) {
+                    optimizedTranslationClient.showTranslationStatus('Listening...', 'processing');
+                }
+            }
+        }
+
+        function stopListening() {
+            if (recognition) {
+                isListening = false;
+                recognition.stop();
+                updateVoiceActivity(false);
+                
+                document.getElementById('startListeningBtn').style.display = 'inline-flex';
+                document.getElementById('stopListeningBtn').style.display = 'none';
+                
+                if (optimizedTranslationClient) {
+                    optimizedTranslationClient.showTranslationStatus('Stopped listening', 'info');
+                }
+            }
+        }
+
+        function updateVoiceActivity(active) {
+            const indicator = document.getElementById('activityIndicator');
+            const text = document.getElementById('activityText');
+            
+            if (active) {
+                indicator.classList.add('active');
+                text.textContent = 'Listening...';
+            } else {
+                indicator.classList.remove('active');
+                text.textContent = 'Stopped';
+            }
+        }
+
+        function updateConnectionStatus(text, status) {
+            const statusText = document.getElementById('statusText');
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            statusText.textContent = text;
+            statusIndicator.className = `status-indicator ${status}`;
+        }
+
+        function updateConfidenceDisplay() {
+            const slider = document.getElementById('confidenceThreshold');
+            const display = document.getElementById('confidenceValue');
+            display.textContent = slider.value;
+        }
+
+        function updatePerformanceDisplay() {
+            if (optimizedTranslationClient) {
+                const stats = optimizedTranslationClient.getPerformanceStats();
+                optimizedTranslationClient.updateMetricsDisplay();
+                
+                // Update advanced monitor
+                document.getElementById('cacheHitRate').textContent = `${stats.cacheHitRate || 0}%`;
+                document.getElementById('avgResponseTime').textContent = `${Math.round(stats.averageResponseTime || 0)}ms`;
+                document.getElementById('queueSize').textContent = stats.queueSize || 0;
+                document.getElementById('apiStatus').textContent = stats.errors > 5 ? '⚠️ Degraded' : '✅ Good';
+            }
+        }
+
+        function clearCache() {
+            fetch('/api/clear-cache', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Translation cache cleared', 'success');
+                        if (optimizedTranslationClient) {
+                            optimizedTranslationClient.showTranslationStatus('Cache cleared', 'success');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing cache:', error);
+                    showNotification('Failed to clear cache', 'error');
+                });
+        }
+
+        function refreshStats() {
+            fetch('/api/performance-metrics')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const metrics = data.metrics;
+                        showNotification('Stats refreshed', 'success');
+                        updatePerformanceDisplay();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching stats:', error);
+                    showNotification('Failed to refresh stats', 'error');
+                });
+        }
+
+        function leaveRoom() {
+            if (socket) {
+                socket.disconnect();
+                location.reload();
+            }
+        }
+
+        function showNotification(message, type) {
+            if (optimizedTranslationClient) {
+                optimizedTranslationClient.showNotification(message, type);
+            } else {
+                console.log(`${type.toUpperCase()}: ${message}`);
+            }
+        }
+    </script>
+</body>
+</html>

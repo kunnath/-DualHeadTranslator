@@ -1,0 +1,287 @@
+/* Enhanced Performance UI Styles for Optimized Translation */
+
+.translation-status {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  margin: 10px 0;
+  transition: all 0.3s ease;
+  min-height: 24px;
+}
+
+.translation-status.processing {
+  background: linear-gradient(45deg, #3498db, #2980b9);
+  color: white;
+  animation: pulse 1.5s ease-in-out infinite alternate;
+}
+
+.translation-status.queued {
+  background: linear-gradient(45deg, #f39c12, #e67e22);
+  color: white;
+}
+
+.translation-status.success {
+  background: linear-gradient(45deg, #27ae60, #229954);
+  color: white;
+}
+
+.translation-status.cached {
+  background: linear-gradient(45deg, #9b59b6, #8e44ad);
+  color: white;
+}
+
+.translation-status.error {
+  background: linear-gradient(45deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.performance-indicator {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.performance-indicator.cached {
+  background: #9b59b6;
+  color: white;
+}
+
+.performance-indicator.fast {
+  background: #27ae60;
+  color: white;
+}
+
+.performance-indicator.normal {
+  background: #f39c12;
+  color: white;
+}
+
+.performance-metrics {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.performance-metrics .metric {
+  display: inline-block;
+  margin: 4px 12px 4px 0;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 300px;
+}
+
+.notification {
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateX(100%);
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.notification.info {
+  background: linear-gradient(45deg, #3498db, #2980b9);
+  color: white;
+}
+
+.notification.success {
+  background: linear-gradient(45deg, #27ae60, #229954);
+  color: white;
+}
+
+.notification.received {
+  background: linear-gradient(45deg, #9b59b6, #8e44ad);
+  color: white;
+}
+
+.notification.error {
+  background: linear-gradient(45deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Enhanced Translation Display Areas */
+.translation-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.translation-box {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.translation-box h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.translation-text {
+  flex: 1;
+  font-size: 18px;
+  line-height: 1.4;
+  color: white;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.translation-box.original {
+  border-left: 4px solid #3498db;
+}
+
+.translation-box.translated {
+  border-left: 4px solid #27ae60;
+}
+
+/* Control Panel Styles */
+.control-panel {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0;
+}
+
+.control-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.toggle-switch {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.toggle-switch.active {
+  background: #27ae60;
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+}
+
+.toggle-switch.active::after {
+  transform: translateX(26px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .translation-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .performance-metrics .metric {
+    display: block;
+    margin: 8px 0;
+  }
+  
+  .notification-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  .control-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* Loading Animation for Better UX */
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
