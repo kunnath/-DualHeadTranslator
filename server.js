@@ -9,6 +9,7 @@ import { VoiceTranslator } from './src/services/VoiceTranslator.js';
 import { TranslationService } from './src/services/TranslationService.js';
 import { FastTranslationService } from './src/services/FastTranslationService.js';
 import { GrammarTeachingService } from './src/services/GrammarTeachingService.js';
+import db from './src/config/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -192,6 +193,66 @@ app.post('/api/clear-cache', (req, res) => {
       error: 'Failed to clear cache',
       details: error.message 
     });
+  }
+});
+
+// API endpoint to submit a translation for an unknown word
+app.post('/api/teach/word-translation', express.json(), async (req, res) => {
+  try {
+    const { userId, word, translation, context, sourceLang, targetLang, domainTag } = req.body;
+    
+    if (!word || !translation || !sourceLang || !targetLang) {
+      return res.status(400).json({ error: 'Missing required fields: word, translation, sourceLang, targetLang' });
+    }
+    
+    const result = await grammarTeachingService.submitWordTranslation(
+      word,
+      translation,
+      context || null,
+      sourceLang,
+      targetLang,
+      userId || 'anonymous',
+      domainTag || null
+    );
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    console.error('Error handling word translation submission:', error);
+    res.status(500).json({ error: 'Server error processing translation' });
+  }
+});
+
+// API endpoint to get unknown words that need translation
+app.get('/api/teach/unknown-words/:sourceLang/:targetLang', async (req, res) => {
+  try {
+    const { sourceLang, targetLang } = req.params;
+    const limit = parseInt(req.query.limit) || 20;
+    
+    const unknownWords = await grammarTeachingService.getUnknownWords(
+      sourceLang,
+      targetLang,
+      limit
+    );
+    
+    res.json({ unknownWords });
+  } catch (error) {
+    console.error('Error getting unknown words:', error);
+    res.status(500).json({ error: 'Failed to retrieve unknown words' });
+  }
+});
+
+// API endpoint to get translation memory statistics
+app.get('/api/teach/translation-stats', async (req, res) => {
+  try {
+    const stats = await grammarTeachingService.getTranslationStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting translation stats:', error);
+    res.status(500).json({ error: 'Failed to retrieve translation statistics' });
   }
 });
 
@@ -571,10 +632,31 @@ setInterval(() => {
   grammarTeachingService.clearOldTranslations(24); // Clear data older than 24 hours
 }, 60 * 60 * 1000); // Every hour
 
-server.listen(PORT, () => {
-  console.log(`🚀 Voice Translator Server running on port ${PORT}`);
-  console.log(`📱 Web interface: http://localhost:${PORT}`);
-  console.log(`🎧 Dual headset: http://localhost:${PORT}/dual-headset`);
-  console.log(`📚 With teaching: http://localhost:${PORT}/teaching`);
-  console.log(`⚡ Optimized: http://localhost:${PORT}/optimized`);
-});
+// Initialize database before starting server
+const startServer = async () => {
+  try {
+    // Test database connection
+    const connected = await db.testConnection();
+    if (!connected) {
+      console.error('❌ Failed to connect to PostgreSQL database. Exiting...');
+      process.exit(1);
+    }
+    
+    // Initialize database schema
+    await db.initializeDatabase();
+    
+    // Start server
+    server.listen(PORT, () => {
+      console.log(`🚀 Voice Translator Server running on port ${PORT}`);
+      console.log(`📱 Web interface: http://localhost:${PORT}`);
+      console.log(`🎧 Dual headset: http://localhost:${PORT}/dual-headset`);
+      console.log(`📚 With teaching: http://localhost:${PORT}/teaching`);
+      console.log(`⚡ Optimized: http://localhost:${PORT}/optimized`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();

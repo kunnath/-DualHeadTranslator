@@ -1,11 +1,11 @@
 # Voice Translator App
-## Real-time English ⇄ German Voice Translation
+## Real-time English ⇄ German Voice Translation with Self-Learning PostgreSQL Translation Memory
 
-A modern, real-time voice translation application that enables seamless communication between English and German speakers using cutting-edge speech recognition, translation, and text-to-speech technologies.
+A modern, real-time voice translation application that enables seamless communication between English and German speakers using cutting-edge speech recognition, translation, and text-to-speech technologies. Now featuring a self-learning PostgreSQL translation memory system that improves over time.
 
 ![Voice Translator Main Interface](1.png)
 
-*The Voice Translator application features a sleek interface with real-time translation capabilities, showing conversation history and audio visualization.*
+*The Voice Translator application features a sleek interface with real-time translation capabilities, showing conversation history, audio visualization, and a self-learning translation memory system.*
 
 ## 🚀 Features
 
@@ -23,19 +23,30 @@ A modern, real-time voice translation application that enables seamless communic
 - **Conversation History**: Track all translations in a session
 - **Room Sharing**: Share conversation rooms for real-time collaboration
 
+### Self-Learning Translation System
+- **PostgreSQL 17 Translation Memory**: Context-aware translation storage and retrieval
+- **Unknown Word Detection**: Identifies and tracks words that need translation
+- **User Contribution System**: Interface for adding translations for unknown words
+- **Automatic Learning**: Learns from sentence pairs in conversations
+- **Confidence Scoring**: Assigns and updates confidence scores for translations
+- **Domain Tagging**: Categorizes translations by domain for context-specific retrieval
+
 ### Technology Stack
 - **Frontend**: Vanilla JavaScript, CSS3, HTML5
 - **Backend**: Node.js, Express.js
 - **Real-time**: Socket.IO for live communication
 - **Speech Processing**: OpenAI Whisper (STT) and TTS
-- **Translation**: OpenAI GPT for contextual translation
+- **Translation**: OpenAI GPT for contextual translation with PostgreSQL memory
+- **Database**: PostgreSQL 17 for translation memory and learning
 - **Audio Processing**: Web Audio API, MediaRecorder
 
 ## 📋 Prerequisites
 
 - Node.js (v16 or higher)
+- PostgreSQL 17 (or compatible version)
 - OpenAI API key (for advanced features)
 - Modern web browser with microphone access
+- PostgreSQL 17 (for self-learning translation memory)
 
 ## 🛠️ Installation
 
@@ -49,18 +60,45 @@ A modern, real-time voice translation application that enables seamless communic
    npm install
    ```
 
-3. **Set up environment variables** (optional but recommended):
+3. **Set up PostgreSQL**:
    ```bash
-   # Create .env file
-   echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
+   # For macOS users
+   brew install postgresql@17
+   brew services start postgresql@17
+   
+   # Run PostgreSQL setup script
+   ./setup_postgres_macos.sh
+   
+   # For other platforms, run
+   ./setup_postgres.sh
    ```
 
-4. **Start the development server**:
+4. **Set up environment variables**:
+   ```bash
+   # Create .env file with your settings, or use the example below
+   cat > .env << EOL
+   # OpenAI API Configuration (Optional)
+   OPENAI_API_KEY=your_openai_api_key_here
+
+   # Server Configuration
+   PORT=3000
+   NODE_ENV=development
+
+   # PostgreSQL Configuration
+   PG_HOST=localhost
+   PG_PORT=5432
+   PG_DATABASE=translation_memory
+   PG_USER=postgres
+   PG_PASSWORD=your_postgres_password
+   EOL
+   ```
+
+5. **Start the development server**:
    ```bash
    npm run dev
    ```
 
-5. **Open your browser** and navigate to:
+6. **Open your browser** and navigate to:
    ```
    http://localhost:3000
    ```
@@ -106,6 +144,8 @@ A modern, real-time voice translation application that enables seamless communic
 - **Grammar, tense, and article analysis**
 - **Word-by-word breakdown with meanings**
 - **Interactive language learning**
+- **Unknown word detection and contribution panel**
+- **Self-learning translation memory**
 
 ## 📚 Teaching Feature Details
 
@@ -171,6 +211,9 @@ Teaching Analysis:
 - **In-Chat Teaching Buttons**: Click "📚 Teach Me" on any message to get detailed grammar analysis
 - **Message-Specific Learning**: Each teaching session focuses on the specific sentence you clicked
 - **Real-time Learning**: Learn grammar, tenses, articles, and word usage instantly
+- **Self-Learning Translation Memory**: PostgreSQL-backed system that improves over time
+- **Unknown Word Detection**: System identifies words it doesn't know and tracks them
+- **User Contribution Panel**: Help improve the system by adding translations for unknown words
 
 ### How It Works
 1. **Join a conversation** using the Live Chat interface
@@ -182,6 +225,9 @@ Teaching Analysis:
    - Articles (der, die, das) and their rules
    - Word-by-word breakdown with meanings
    - Usage tips and examples
+5. **Check unknown words panel** to see words the system is learning
+6. **Contribute translations** for unknown words to improve the system
+7. **System learns automatically** from your conversations and grows more accurate over time
 
 ### Available Interfaces
 - The Live Chat with Teaching feature is available in the **Teaching-Enhanced Interface** and the **Optimized Interface**.
@@ -193,14 +239,36 @@ Teaching Analysis:
 public/
 ├── index.html          # Main HTML structure
 ├── styles.css          # Modern CSS with animations
-└── app.js             # JavaScript application logic
+├── app.js              # JavaScript application logic
+├── dual-headset.html   # Dual headset interface
+├── dual-headset.js     # Dual headset logic
+├── live-chat-with-teaching.html  # Live chat interface with teaching features
+└── optimized-translation-client.js  # Optimized client implementation
 ```
 
 ### Backend Services
 ```
-src/services/
-├── VoiceTranslator.js  # Speech-to-text and text-to-speech
-└── TranslationService.js # Text translation logic
+src/
+├── services/
+│   ├── VoiceTranslator.js         # Speech-to-text and text-to-speech
+│   ├── TranslationService.js      # Text translation logic
+│   ├── FastTranslationService.js  # Performance-optimized translation
+│   ├── GrammarTeachingService.js  # Grammar analysis and teaching
+│   ├── OllamaService.js           # Local LLM integration
+│   └── TranslationMemoryDB.js     # PostgreSQL translation memory system
+│
+└── config/
+    └── database.js                # PostgreSQL connection configuration
+```
+
+### Database Schema
+```
+PostgreSQL 17 Tables:
+├── language_pairs        # Supported language pairs
+├── translations          # Stored translations with confidence scores
+├── unknown_words         # Words needing translation
+├── user_contributions    # User-provided translations
+└── learning_sessions     # User learning activity tracking
 ```
 
 ### Key Technologies
@@ -212,6 +280,7 @@ src/services/
 
 #### Translation Engine
 - **Primary**: OpenAI GPT-3.5-turbo for contextual translation
+- **Secondary**: PostgreSQL translation memory for known phrases
 - **Fallback**: Basic dictionary lookup for offline operation
 - **Context Awareness**: Maintains conversation context and tone
 
@@ -219,6 +288,12 @@ src/services/
 - **Primary**: OpenAI TTS with high-quality voices
 - **Fallback**: Web Speech Synthesis API
 - **Voice Selection**: Automatic voice selection based on language
+
+#### Database System
+- **Engine**: PostgreSQL 17
+- **Connection Pool**: Managed connection pooling for performance
+- **Query Optimization**: Indexes on frequently queried fields
+- **Transaction Support**: ACID-compliant transactions for data integrity
 
 ## 🔧 Configuration
 
@@ -230,7 +305,38 @@ OPENAI_API_KEY=your_api_key_here
 # Optional server configuration
 PORT=3000
 NODE_ENV=development
+
+# PostgreSQL configuration
+PG_HOST=localhost
+PG_PORT=5432
+PG_DATABASE=translation_memory
+PG_USER=postgres
+PG_PASSWORD=your_postgres_password
+PG_POOL_MAX=20
+PG_IDLE_TIMEOUT=30000
 ```
+
+### PostgreSQL Translation Memory
+The application uses PostgreSQL 17 for its translation memory system. Key features include:
+
+- **Tables**:
+  - `language_pairs`: Tracks supported language pairs
+  - `translations`: Stores word/phrase translations with confidence scores
+  - `unknown_words`: Records words that need translation
+  - `user_contributions`: Tracks user-provided translations
+  - `learning_sessions`: Monitors user learning activities
+
+- **Administration**:
+  ```bash
+  # Connect to the database
+  psql -d translation_memory
+  
+  # View translation statistics
+  SELECT COUNT(*) FROM translations;
+  
+  # View unknown words needing translation
+  SELECT word, occurrence_count FROM unknown_words ORDER BY occurrence_count DESC LIMIT 10;
+  ```
 
 ### Audio Settings
 The app automatically configures optimal audio settings:
@@ -310,19 +416,29 @@ npm run client     # Start static file server for frontend only
 
 ### API Endpoints
 ```
+# Translation API
 POST /api/translate-audio    # Upload audio for translation
 POST /api/translate-text     # Translate text directly
+
+# Translation Memory API
+GET  /api/teach/unknown-words/:sourceLang/:targetLang  # Get unknown words
+POST /api/teach/word-translation                       # Submit translation for unknown word
+GET  /api/teach/translation-stats                      # Get translation memory statistics
 ```
 
 ### WebSocket Events
 ```javascript
 // Client to Server
-'join-room'        // Join a conversation room
-'audio-stream'     // Send audio for real-time translation
+'join-room'               // Join a conversation room
+'audio-stream'            // Send audio for real-time translation
+'ask-grammar-question'    // Request grammar explanation
+'get-unknown-words'       // Request list of unknown words
 
 // Server to Client
-'translated-audio' // Receive translated audio
-'translation-error'// Handle translation errors
+'translated-audio'        // Receive translated audio
+'translation-error'       // Handle translation errors
+'grammar-explanation'     // Receive grammar teaching
+'unknown-words-response'  // Receive list of unknown words
 ```
 
 ## 🚀 Deployment
@@ -376,11 +492,105 @@ MIT License - see LICENSE file for details
 - Verify audio codec support
 - Try different browsers
 
+**PostgreSQL Connection Issues**:
+- Verify PostgreSQL is running with: `brew services list` or `pg_isready`
+- Check your connection details in `.env` file match your PostgreSQL installation
+- Ensure the `translation_memory` database exists: `psql -l`
+- Try running the setup script again: `./setup_postgres_macos.sh`
+- Check PostgreSQL logs: `tail -f /opt/homebrew/var/log/postgresql@17.log`
+
+**Database Setup Errors**:
+- Error message `database "translation_memory" does not exist`: Run the setup script or create manually:
+  ```sql
+  createdb translation_memory
+  ```
+- Error with table creation: Check permissions and try manual initialization:
+  ```sql
+  psql -d translation_memory -f schema.sql
+  ```
+
+**Application Startup Failures**:
+- Check error messages in the console
+- Verify all dependencies are installed: `npm install`
+- Ensure PostgreSQL connection is working: `psql -d translation_memory -c "SELECT NOW();"`
+- Restart PostgreSQL if needed: `brew services restart postgresql@17`
+
+### PostgreSQL Debugging
+
+**Checking PostgreSQL Status**:
+```bash
+# Check if PostgreSQL is running
+brew services list | grep postgres
+
+# Check if database exists
+psql -l
+
+# Connect to the database
+psql -d translation_memory
+
+# Within psql, useful commands:
+\dt         # List all tables
+\d+ table_name  # Describe a specific table
+SELECT COUNT(*) FROM translations;  # Count records
+```
+
+**Viewing Database Contents**:
+```bash
+# Check for unknown words
+psql -d translation_memory -c "SELECT word, occurrence_count FROM unknown_words ORDER BY occurrence_count DESC LIMIT 10;"
+
+# View recent translations
+psql -d translation_memory -c "SELECT source_word, target_word, confidence FROM translations ORDER BY created_at DESC LIMIT 10;"
+
+# Check translation memory statistics
+psql -d translation_memory -c "SELECT COUNT(*) FROM translations;"
+```
+
+**Resetting the Database**:
+```bash
+# Drop and recreate the database (warning: destroys all data)
+dropdb translation_memory
+createdb translation_memory
+
+# Or run the setup script again
+./setup_postgres_macos.sh
+```
+
+**Transaction Log Issues**:
+If you encounter errors related to transaction logs or database corruption:
+```bash
+# For macOS with Homebrew:
+brew services stop postgresql@17
+rm -rf /opt/homebrew/var/postgresql@17/pg_wal/*
+brew services start postgresql@17
+```
+
 ### Browser Compatibility
 - **Chrome/Chromium**: Full support
 - **Firefox**: Full support
 - **Safari**: Limited Web Speech API support
 - **Mobile Browsers**: Optimized support
+
+### Real-time Application Debugging
+
+**Socket.IO Connection Issues**:
+- Check browser console for connection errors
+- Verify firewall settings aren't blocking WebSocket connections
+- Try disabling browser extensions that might interfere with WebSockets
+
+**Memory Usage and Performance**:
+- Monitor server performance with: `top -pid $(pgrep -f "node server.js")`
+- Check for memory leaks by observing memory usage over time
+- For slow translation responses, verify PostgreSQL query performance:
+  ```sql
+  EXPLAIN ANALYZE SELECT * FROM translations WHERE language_pair_id = 1;
+  ```
+
+**Logging and Diagnostics**:
+- Enable detailed logging by setting `DEBUG=true` in your `.env` file
+- Check application logs for errors
+- Monitor PostgreSQL logs: `tail -f /opt/homebrew/var/log/postgresql@17.log`
+- Use browser developer tools to monitor network requests and WebSocket activity
 
 ## 📞 Support
 
@@ -484,3 +694,195 @@ The Voice Translator is designed to work across multiple platforms:
 - **Updates**: Regular updates with new features and performance improvements
 
 This comprehensive documentation should help any user understand, install, and effectively use the Voice Translator application for their communication needs.
+
+## 🧠 PostgreSQL Translation Memory System
+
+The application features a sophisticated self-learning translation memory system built on PostgreSQL 17. This system learns from conversations, improves over time, and allows users to contribute directly to its knowledge base.
+
+### Key Components
+
+#### 1. Translation Storage & Retrieval
+- **Context-Aware Storage**: Translations are stored with context examples
+- **Confidence Scoring**: Each translation has a confidence score that adjusts over time
+- **Usage Tracking**: System tracks how often each translation is used
+- **User Verification**: Tracks whether translations have been verified by users
+
+#### 2. Unknown Word Management
+- **Automatic Detection**: System identifies words it can't translate confidently
+- **Occurrence Tracking**: Tracks how often unknown words appear
+- **Context Capture**: Stores the context in which unknown words appear
+- **Priority Sorting**: Highlights most frequently occurring unknown words
+
+#### 3. User Contribution Interface
+- **Word List**: Shows unknown words that need translation
+- **Simple Input**: Easy interface to add translations
+- **Verification System**: User contributions are marked as verified
+- **Instant Integration**: Contributed translations are immediately available
+
+#### 4. Automatic Learning
+- **Sentence Pair Analysis**: System analyzes full sentence pairs to learn word mappings
+- **Confidence Adjustment**: Translation confidence increases with repeated successful use
+- **Pattern Recognition**: Learns common patterns in translations
+- **Domain-Specific Learning**: Can tag translations with domain context (e.g., business, travel)
+
+### Usage Statistics
+The system provides usage statistics through the API:
+- Total number of stored translations
+- Number of unknown words
+- User contribution counts
+- Learning rate (new words per day/week/month)
+
+### Database Management
+
+To monitor and manage the translation memory system:
+
+```bash
+# Check translation count
+psql -d translation_memory -c "SELECT COUNT(*) FROM translations;"
+
+# View top unknown words
+psql -d translation_memory -c "SELECT word, occurrence_count FROM unknown_words ORDER BY occurrence_count DESC LIMIT 10;"
+
+# Check recent user contributions
+psql -d translation_memory -c "SELECT source_word, target_word, created_at FROM user_contributions ORDER BY created_at DESC LIMIT 10;"
+
+# View language pairs
+psql -d translation_memory -c "SELECT source_lang, target_lang FROM language_pairs;"
+```
+
+### System Architecture
+The translation memory is implemented through several interconnected components:
+- `TranslationMemoryDB.js`: Core database interaction layer
+- `GrammarTeachingService.js`: Integrates teaching features with memory system
+- `database.js`: Manages PostgreSQL connection and pool
+- Frontend interface in `live-chat-with-teaching.html`
+
+### Performance Considerations
+The system is optimized for:
+- Fast lookup of known translations
+- Efficient storage and retrieval of context information
+- Minimal latency impact on real-time translation
+- Scalable design for growing translation databases
+
+## 🗄️ Database Setup & Maintenance
+
+### Manual PostgreSQL Setup
+
+If you need to manually set up the PostgreSQL database:
+
+```bash
+# Create the database
+createdb translation_memory
+
+# Connect to the database
+psql -d translation_memory
+
+# Within psql, create the necessary tables:
+CREATE TABLE language_pairs (
+  id SERIAL PRIMARY KEY,
+  source_lang VARCHAR(10) NOT NULL,
+  target_lang VARCHAR(10) NOT NULL,
+  UNIQUE(source_lang, target_lang)
+);
+
+CREATE TABLE translations (
+  id SERIAL PRIMARY KEY,
+  language_pair_id INTEGER REFERENCES language_pairs(id),
+  source_word TEXT NOT NULL,
+  target_word TEXT NOT NULL,
+  confidence FLOAT NOT NULL DEFAULT 0.5,
+  usage_count INTEGER NOT NULL DEFAULT 1,
+  user_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  context_examples JSONB DEFAULT '[]',
+  domain_tags JSONB DEFAULT '[]',
+  UNIQUE(language_pair_id, source_word)
+);
+
+CREATE TABLE unknown_words (
+  id SERIAL PRIMARY KEY,
+  language_pair_id INTEGER REFERENCES language_pairs(id),
+  word TEXT NOT NULL,
+  occurrence_count INTEGER NOT NULL DEFAULT 1,
+  first_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  last_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  contexts JSONB DEFAULT '[]',
+  UNIQUE(language_pair_id, word)
+);
+
+CREATE TABLE user_contributions (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  translation_id INTEGER REFERENCES translations(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  source_lang VARCHAR(10) NOT NULL,
+  target_lang VARCHAR(10) NOT NULL,
+  source_word TEXT NOT NULL,
+  target_word TEXT NOT NULL
+);
+
+CREATE TABLE learning_sessions (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  session_start TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  session_end TIMESTAMP WITH TIME ZONE,
+  source_lang VARCHAR(10) NOT NULL,
+  target_lang VARCHAR(10) NOT NULL,
+  words_learned INTEGER DEFAULT 0,
+  words_practiced INTEGER DEFAULT 0
+);
+
+# Create necessary indexes
+CREATE INDEX idx_translations_language_pair_id ON translations(language_pair_id);
+CREATE INDEX idx_unknown_words_language_pair_id ON unknown_words(language_pair_id);
+CREATE INDEX idx_unknown_words_occurrence ON unknown_words(occurrence_count DESC);
+CREATE INDEX idx_user_contributions_user_id ON user_contributions(user_id);
+CREATE INDEX idx_translations_confidence ON translations(confidence);
+CREATE INDEX idx_translations_usage_count ON translations(usage_count);
+CREATE INDEX idx_translations_created_at ON translations(created_at);
+CREATE INDEX idx_unknown_words_last_seen ON unknown_words(last_seen);
+```
+
+### Database Backup & Restore
+
+To backup your translation memory:
+
+```bash
+# Create a backup file
+pg_dump -d translation_memory > translation_memory_backup.sql
+
+# To restore from backup
+createdb translation_memory  # If needed
+psql -d translation_memory -f translation_memory_backup.sql
+```
+
+### PostgreSQL Maintenance
+
+Regular maintenance tips:
+
+```bash
+# Vacuum the database to reclaim space and optimize performance
+psql -d translation_memory -c "VACUUM ANALYZE;"
+
+# Check database size
+psql -d translation_memory -c "SELECT pg_size_pretty(pg_database_size('translation_memory'));"
+
+# Find largest tables
+psql -d translation_memory -c "SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) FROM pg_catalog.pg_statio_user_tables ORDER BY pg_total_relation_size(relid) DESC;"
+```
+
+### Monitoring Translation Growth
+
+Track how your translation memory is growing:
+
+```bash
+# Daily growth
+psql -d translation_memory -c "SELECT COUNT(*) FROM translations WHERE created_at > NOW() - INTERVAL '1 day';"
+
+# Weekly growth
+psql -d translation_memory -c "SELECT COUNT(*) FROM translations WHERE created_at > NOW() - INTERVAL '7 days';"
+
+# Most active language pairs
+psql -d translation_memory -c "SELECT lp.source_lang, lp.target_lang, COUNT(t.id) FROM translations t JOIN language_pairs lp ON t.language_pair_id = lp.id GROUP BY lp.source_lang, lp.target_lang ORDER BY COUNT(t.id) DESC;"
+```

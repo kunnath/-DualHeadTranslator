@@ -1,18 +1,20 @@
 import { OllamaService } from './OllamaService.js';
 import { FastGrammarService } from './FastGrammarService.js';
+import { TranslationMemoryDB } from './TranslationMemoryDB.js';
 
 export class GrammarTeachingService {
   constructor() {
     this.ollamaService = new OllamaService();
     this.fastGrammarService = new FastGrammarService();
+    this.translationMemoryDB = new TranslationMemoryDB();
     this.recentTranslations = new Map(); // Store recent translations per user
     this.teachingCache = new Map(); // Cache teaching explanations
     this.useFastMode = true; // Use fast analysis by default
-    console.log('📚 GrammarTeachingService initialized with fast grammar analysis');
+    console.log('📚 GrammarTeachingService initialized with fast grammar analysis and PostgreSQL integration');
   }
 
   // Store recent translation for teaching reference
-  storeTranslation(userId, originalText, translatedText, sourceLanguage, targetLanguage) {
+  async storeTranslation(userId, originalText, translatedText, sourceLanguage, targetLanguage) {
     if (!this.recentTranslations.has(userId)) {
       this.recentTranslations.set(userId, []);
     }
@@ -34,6 +36,14 @@ export class GrammarTeachingService {
     });
     
     console.log(`📚 Stored translation for teaching: "${originalText}" → "${translatedText}"`);
+    
+    // Learn from this translation pair
+    await this.learnFromTranslation(
+      originalText, 
+      translatedText, 
+      sourceLanguage, 
+      targetLanguage
+    );
   }
 
   // Get recent translations for a user
@@ -284,5 +294,211 @@ Response:`;
       responseTime: 50,
       source: 'fast-fallback'
     };
+  }
+
+  // Process a word for teaching, checking the translation database
+  async processWordForTeaching(word, context, sourceLang, targetLang) {
+    // Skip very short words and punctuation
+    if (word.length <= 1 || /^[,.!?;:'"()]+$/.test(word)) {
+      return null;
+    }
+    
+    // Check if word is in the translation database
+    const translationEntry = await this.translationMemoryDB.lookup(word, sourceLang, targetLang);
+    
+    if (translationEntry) {
+      // Word is known, use the stored translation
+      return {
+        word: word,
+        translation: translationEntry.translation,
+        confidence: translationEntry.confidence,
+        wordType: this.determineWordType(word, sourceLang),
+        isKnown: true,
+        usageCount: translationEntry.usageCount,
+        examples: translationEntry.contextExamples
+      };
+    } else {
+      // Word is unknown, record it for later learning
+      await this.translationMemoryDB.recordUnknownWord(word, sourceLang, targetLang, context);
+      
+      return {
+        word: word,
+        translation: '<unknown>',
+        confidence: 0,
+        wordType: this.determineWordType(word, sourceLang),
+        isKnown: false,
+        examples: [context]
+      };
+    }
+  }
+  
+  // Simple method to guess word type based on patterns
+  determineWordType(word, language) {
+    const lowerWord = word.toLowerCase();
+    
+    // Simple heuristics for English
+    if (language === 'en') {
+      if (/^(the|a|an)$/.test(lowerWord)) return 'article';
+      if (/^(i|you|he|she|it|we|they|this|that)$/i.test(lowerWord)) return 'pronoun';
+      if (/^(is|am|are|was|were|be|been|will|shall|have|has|had)$/i.test(lowerWord)) return 'auxiliary verb';
+      if (/^(in|on|at|by|for|with|from|to|into|onto)$/i.test(lowerWord)) return 'preposition';
+      if (/^(and|or|but|yet|so|nor|for)$/i.test(lowerWord)) return 'conjunction';
+      if (/ing$/.test(lowerWord)) return 'verb (present participle)';
+      if (/ed$/.test(lowerWord)) return 'verb (past tense/participle)';
+      if (/s$/.test(lowerWord)) return 'noun (plural) or verb (3rd person)';
+      if (/ly$/.test(lowerWord)) return 'adverb';
+    }
+    
+    // Simple heuristics for German
+    if (language === 'de') {
+      if (/^(der|die|das|ein|eine|einen)$/i.test(lowerWord)) return 'article';
+      if (/^(ich|du|er|sie|es|wir|ihr|sie|dieser|diese|dieses)$/i.test(lowerWord)) return 'pronoun';
+      if (/^(ist|bin|sind|war|waren|sein|gewesen|werde|wird|haben|hat|hatte)$/i.test(lowerWord)) return 'auxiliary verb';
+      if (/^(in|an|auf|bei|für|mit|von|zu|nach|durch)$/i.test(lowerWord)) return 'preposition';
+      if (/^(und|oder|aber|doch|sondern|denn)$/i.test(lowerWord)) return 'conjunction';
+      if (/en$/.test(lowerWord)) return 'verb (infinitive) or plural noun';
+      if (/ung$/.test(lowerWord)) return 'noun (feminine)';
+      if (/lich$/.test(lowerWord)) return 'adjective';
+      if (/heit$|keit$/.test(lowerWord)) return 'noun (feminine)';
+    }
+    
+    // Default cases
+    if (word.charAt(0) === word.charAt(0).toUpperCase() && language === 'de') {
+      return 'noun'; // Capitalized words in German are typically nouns
+    }
+    
+    return 'word'; // Generic fallback
+  }
+  
+  // Analyze a sentence and provide grammar teaching with database integration
+  async analyzeForTeaching(text, sourceLanguage, targetLanguage) {
+    try {
+      // Basic validation
+      if (!text || text.trim().length === 0) {
+        return {
+          error: 'No text provided for teaching analysis'
+        };
+      }
+      
+      console.log(`📚 Analyzing for teaching: "${text}" (${sourceLanguage} → ${targetLanguage})`);
+      
+      // Process words with database lookups
+      const words = text.split(/\s+/);
+      const wordAnalysis = await Promise.all(words.map(async (word) => {
+        const cleanWord = word.replace(/[,.!?;:'"()]/g, '').toLowerCase();
+        if (cleanWord.length === 0) return null;
+        
+        return await this.processWordForTeaching(cleanWord, text, sourceLanguage, targetLanguage);
+      }));
+      
+      // Filter out null entries (punctuation)
+      const filteredWordAnalysis = wordAnalysis.filter(entry => entry !== null);
+      
+      // Calculate unknown word percentage
+      const unknownWords = filteredWordAnalysis.filter(entry => !entry.isKnown);
+      const unknownPercentage = Math.round((unknownWords.length / filteredWordAnalysis.length) * 100);
+      
+      // Get grammar analysis using existing methods
+      const grammarAnalysis = await this.generateFastTeachingExplanation(
+        text, sourceLanguage, targetLanguage
+      );
+      
+      // Combine everything into a comprehensive response
+      const response = {
+        sourceText: text,
+        sourceLanguage,
+        targetLanguage,
+        grammar: grammarAnalysis.grammar,
+        tense: grammarAnalysis.tense,
+        articles: grammarAnalysis.articles,
+        usage: grammarAnalysis.usage,
+        wordBreakdown: filteredWordAnalysis,
+        stats: {
+          totalWords: filteredWordAnalysis.length,
+          unknownWords: unknownWords.length,
+          unknownPercentage: unknownPercentage
+        },
+        tips: this.getQuickTips(targetLanguage),
+        suggestions: this.getSuggestedQuestions({
+          sourceLanguage,
+          targetLanguage,
+          originalText: text,
+          translatedText: '' // May not be available
+        })
+      };
+      
+      return response;
+      
+    } catch (error) {
+      console.error('Error in grammar teaching analysis:', error);
+      return {
+        error: 'Failed to analyze text for teaching',
+        details: error.message
+      };
+    }
+  }
+  
+  // Submit a user-provided translation for an unknown word
+  async submitWordTranslation(word, translation, context, sourceLanguage, targetLanguage, userId = 'system') {
+    try {
+      await this.translationMemoryDB.recordUserContribution(
+        userId,
+        word,
+        translation,
+        sourceLanguage,
+        targetLanguage,
+        context
+      );
+      
+      console.log(`📝 User ${userId} contributed translation: "${word}" → "${translation}"`);
+      
+      return {
+        success: true,
+        message: `Translation for "${word}" added to database`,
+        word: word,
+        translation: translation
+      };
+    } catch (error) {
+      console.error('Error submitting word translation:', error);
+      return {
+        success: false,
+        error: 'Failed to save translation',
+        details: error.message
+      };
+    }
+  }
+  
+  // Learn from translated sentence pairs
+  async learnFromTranslation(originalText, translatedText, sourceLanguage, targetLanguage, confidence = 0.7) {
+    try {
+      // Store in translation memory
+      await this.translationMemoryDB.learnFromConversation(
+        originalText,
+        translatedText,
+        sourceLanguage,
+        targetLanguage,
+        confidence
+      );
+      
+      console.log(`🧠 Learned from translation: "${originalText}" → "${translatedText}"`);
+      return true;
+    } catch (error) {
+      console.error('Error learning from translation:', error);
+      return false;
+    }
+  }
+  
+  // Get unknown words that need translation
+  async getUnknownWords(sourceLanguage, targetLanguage, limit = 20) {
+    return await this.translationMemoryDB.getPriorityUnknownWords(
+      sourceLanguage, 
+      targetLanguage, 
+      limit
+    );
+  }
+  
+  // Get translation memory statistics
+  async getTranslationStats() {
+    return await this.translationMemoryDB.getStats();
   }
 }
