@@ -423,6 +423,16 @@
         .error {
             color: rgba(255, 100, 100, 0.8);
         }
+        
+        .error-message {
+            background: rgba(220, 53, 69, 0.1);
+            border-left: 4px solid #dc3545;
+            color: #fff;
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
 
         .notification {
             position: fixed;
@@ -457,6 +467,57 @@
         .notification.info {
             background: linear-gradient(45deg, #17a2b8, #138496);
             box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+        }
+
+        /* Status notification styles */
+        .status-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            z-index: 3000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            max-width: 300px;
+        }
+
+        .status-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .status-notification.error {
+            background: linear-gradient(45deg, #dc3545, #f55a5a);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .status-notification.in-room {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .status-notification.connected {
+            background: linear-gradient(45deg, #17a2b8, #138496);
+            box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+        }
+        
+        .status-notification.disconnected {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+            box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);
+        }
+        
+        .loading-spinner-small {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
         }
 
         .unknown-word {
@@ -756,11 +817,28 @@
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            initializeEventListeners();
-            initializeSocket();
-            
-            // Initialize the translation memory manager
-            translationMemoryManager = new TranslationMemoryManager();
+            try {
+                initializeEventListeners();
+                initializeSocket();
+                
+                // Initialize the translation memory manager
+                translationMemoryManager = new TranslationMemoryManager();
+                
+                // Set initial status
+                updateConnectionStatus('Ready to Connect', 'disconnected');
+            } catch (error) {
+                console.error('Error initializing application:', error);
+                updateConnectionStatus('Initialization Error', 'error');
+                
+                // Add a visible error message
+                const setupSection = document.getElementById('setupSection');
+                if (setupSection) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-message';
+                    errorDiv.textContent = 'There was an error initializing the application. Please try refreshing the page.';
+                    setupSection.prepend(errorDiv);
+                }
+            }
         });
 
         function initializeEventListeners() {
@@ -800,13 +878,37 @@
         }
 
         function initializeSocket() {
-            socket = io();
+            if (socket) {
+                // Socket already initialized, no need to do it again
+                return;
+            }
+            
+            // Create socket connection
+            socket = io({
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000
+            });
             
             socket.on('connect', function() {
+                console.log('Socket connected successfully');
                 updateConnectionStatus('Connected', 'connected');
             });
 
-            socket.on('disconnect', function() {
+            socket.on('connect_error', function(error) {
+                console.error('Socket connection error:', error);
+                updateConnectionStatus('Connection Error', 'error');
+            });
+
+            socket.on('connect_timeout', function() {
+                console.error('Socket connection timeout');
+                updateConnectionStatus('Connection Timeout', 'error');
+            });
+
+            socket.on('disconnect', function(reason) {
+                console.log('Socket disconnected:', reason);
                 updateConnectionStatus('Disconnected', 'disconnected');
             });
 
@@ -887,11 +989,28 @@
 
             console.log(`Joining room: ${roomId} as ${userLanguage} user`);
 
-            socket.emit('join-room', {
-                roomId: roomId,
-                userLanguage: userLanguage,
-                deviceType: 'web'
-            });
+            // Make sure socket is initialized before trying to join
+            if (!socket || !socket.connected) {
+                console.log('Socket not connected, reconnecting...');
+                socket = io();
+                
+                // Wait for connection before joining
+                socket.on('connect', function() {
+                    console.log('Socket reconnected, now joining room');
+                    socket.emit('join-room', {
+                        roomId: roomId,
+                        userLanguage: userLanguage,
+                        deviceType: 'web'
+                    });
+                });
+            } else {
+                // Socket is already connected, join directly
+                socket.emit('join-room', {
+                    roomId: roomId,
+                    userLanguage: userLanguage,
+                    deviceType: 'web'
+                });
+            }
         }
 
         function showTranslationSection() {
@@ -1021,8 +1140,60 @@
             const statusText = document.getElementById('statusText');
             const statusIndicator = document.getElementById('statusIndicator');
             
-            statusText.textContent = text;
-            statusIndicator.className = `status-indicator ${status}`;
+            if (statusText && statusIndicator) {
+                statusText.textContent = text;
+                statusIndicator.className = `status-indicator ${status}`;
+            }
+            
+            // Also show a notification for important status changes
+            if (status === 'error' || status === 'in-room' || status === 'connected') {
+                showStatusNotification(text, status);
+            }
+            
+            // Update the join button state
+            const joinBtn = document.getElementById('joinRoomBtn');
+            if (joinBtn) {
+                if (status === 'error' || status === 'disconnected') {
+                    joinBtn.innerHTML = `
+                        <span class="btn-text">🔄 Reconnect and Join</span>
+                        <span class="btn-icon">→</span>
+                    `;
+                } else if (status === 'connecting') {
+                    joinBtn.innerHTML = `
+                        <span class="btn-text">🔄 Connecting...</span>
+                        <span class="btn-icon loading-spinner-small"></span>
+                    `;
+                    joinBtn.disabled = true;
+                } else {
+                    joinBtn.innerHTML = `
+                        <span class="btn-text">💬 Start Live Translation with Teaching</span>
+                        <span class="btn-icon">→</span>
+                    `;
+                    joinBtn.disabled = false;
+                }
+            }
+        }
+        
+        function showStatusNotification(message, status) {
+            // Create notification if it doesn't exist
+            let notification = document.querySelector('.status-notification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.className = 'status-notification';
+                document.body.appendChild(notification);
+            }
+            
+            // Update content and style
+            notification.textContent = message;
+            notification.className = `status-notification ${status}`;
+            
+            // Show with animation
+            notification.classList.add('show');
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
 
         function generateMessageId() {
@@ -1596,3 +1767,6 @@
 
         // Initialize translation memory manager when the app loads
         let translationMemoryManager;
+    </script>
+</body>
+</html>

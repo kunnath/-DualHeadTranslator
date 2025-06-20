@@ -1,0 +1,75 @@
+version: '3.8'
+
+# Development configuration for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.development.yml up -d
+
+services:
+  voice-translator:
+    restart: unless-stopped
+    volumes:
+      # Add development-specific volumes for hot reloading
+      - ./server.js:/app/server.js
+      - ./src:/app/src
+      - ./public:/app/public
+    environment:
+      - NODE_ENV=development
+      - DEBUG=voice-translator:*
+      # Disable HTTPS in development
+      - USE_HTTPS=false
+    # Use nodemon for hot reloading in development
+    command: npx nodemon server.js
+
+  postgres:
+    restart: unless-stopped
+    # Make postgres accessible from host machine for development
+    ports:
+      - "5432:5432"
+    environment:
+      # Use default development credentials
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      # Add volume for development database dumps
+      - ./data/postgres_dev:/var/lib/postgresql/data
+
+  ollama:
+    restart: unless-stopped
+    # Remove GPU requirements for Mac compatibility
+    deploy: {}
+    # Add volume for development models
+    volumes:
+      - ./data/ollama_models:/root/.ollama
+
+  streamlit:
+    restart: unless-stopped
+    volumes:
+      # Add development-specific volumes for hot reloading
+      - ./streamlit_app.py:/app/streamlit_app.py
+      - ./data:/app/data
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_HEADLESS=false
+      - STREAMLIT_AUTHENTICATION=false
+      - STREAMLIT_HOT_RELOAD=true
+    command: streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0 --server.runOnSave=true
+
+  # Development only services
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    networks:
+      - translator_network
+    depends_on:
+      - postgres
+
+  # Scale down monitoring services in development
+  prometheus:
+    restart: "no"
+    
+  grafana:
+    restart: "no"
+
+# Keep the same networks and volumes as in the main docker-compose.yml

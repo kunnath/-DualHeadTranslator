@@ -1,0 +1,105 @@
+version: '3.8'
+
+# Production overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  voice-translator:
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Add any additional production-specific configs like SSL
+    environment:
+      - NODE_ENV=production
+      # Use TLS in production
+      - USE_HTTPS=true
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  postgres:
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  ollama:
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+              count: all
+              driver: nvidia
+        limits:
+          cpus: '4'
+          memory: 8G
+
+  streamlit:
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_HEADLESS=true
+      # Enable authentication in production
+      - STREAMLIT_AUTHENTICATION=true
+      
+  # Add a reverse proxy for production
+  traefik:
+    image: traefik:v2.9
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/etc/traefik
+    networks:
+      - translator_network
+    depends_on:
+      - voice-translator
+      - streamlit
+    restart: always
+    
+  # Add a backup service
+  backup:
+    image: postgres:17-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data:ro
+      - ./backups:/backups
+    command: |
+      bash -c 'while true; do
+        FILENAME="/backups/backup-$$(date +%Y-%m-%d_%H-%M-%S).sql"
+        pg_dump -h postgres -U postgres -d translation_memory > $$FILENAME
+        gzip $$FILENAME
+        find /backups -type f -name "*.sql.gz" -mtime +7 -delete
+        sleep 86400
+      done'
+    depends_on:
+      - postgres
+    restart: always
+    networks:
+      - translator_network

@@ -1,0 +1,83 @@
+# Git
+.git
+.gitignore
+.github
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Node.js
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+*.egg-info/
+
+# Data
+data/*.wav
+data/*.mp3
+data/*.json
+data/logs/
+
+# Build artifacts
+dist
+build
+*.tar.gz
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+
+# Logs
+logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Documentation
+docs/
+
+# Testing
+coverage/
+.nyc_output
+.coverage
+htmlcov/
+
+# Backups
+*.bak
+*~
+
+# Large media files
+*.mp4
+*.tiff
+*.avi
+*.flv
+*.mov
+*.wmv

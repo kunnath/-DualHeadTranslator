@@ -1,0 +1,22 @@
+version: '3.8'
+
+# Mac/Apple Silicon specific overrides
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.mac.yml up -d
+
+services:
+  ollama:
+    # Remove GPU requirements for Mac compatibility
+    deploy: {}
+    
+    # Add special environment variables for optimizing on Apple Silicon
+    environment:
+      - OLLAMA_HOST=http://localhost:11434
+      
+    # Use host networking for better performance on Mac
+    # This only works when running Ollama natively, outside of Docker
+    # You may need to run Ollama separately: brew install ollama && ollama serve
+    # networks:
+    #   host: {}
+    #   translator_network: {}
+    # Extra options for better M-series performance
+    # command: ollama serve
