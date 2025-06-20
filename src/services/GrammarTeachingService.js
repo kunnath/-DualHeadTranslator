@@ -15,35 +15,53 @@ export class GrammarTeachingService {
 
   // Store recent translation for teaching reference
   async storeTranslation(userId, originalText, translatedText, sourceLanguage, targetLanguage) {
-    if (!this.recentTranslations.has(userId)) {
-      this.recentTranslations.set(userId, []);
+    try {
+      // Input validation
+      if (!originalText || !translatedText) {
+        console.error('Missing text in storeTranslation:', { originalText, translatedText });
+        return false;
+      }
+      
+      if (!this.recentTranslations.has(userId)) {
+        this.recentTranslations.set(userId, []);
+      }
+      
+      const userTranslations = this.recentTranslations.get(userId);
+      
+      // Keep only last 10 translations per user
+      if (userTranslations.length >= 10) {
+        userTranslations.shift();
+      }
+      
+      userTranslations.push({
+        id: Date.now(),
+        originalText,
+        translatedText,
+        sourceLanguage,
+        targetLanguage,
+        timestamp: new Date().toISOString()
+      });
+      
+      console.log(`📚 Stored translation for teaching: "${originalText}" → "${translatedText}"`);
+      
+      // Learn from this translation pair
+      try {
+        await this.learnFromTranslation(
+          originalText, 
+          translatedText, 
+          sourceLanguage, 
+          targetLanguage
+        );
+      } catch (learningError) {
+        console.error('Failed to learn from translation, but continuing:', learningError);
+        // Don't throw - let the function continue even if learning fails
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error storing translation:', error);
+      return false;
     }
-    
-    const userTranslations = this.recentTranslations.get(userId);
-    
-    // Keep only last 10 translations per user
-    if (userTranslations.length >= 10) {
-      userTranslations.shift();
-    }
-    
-    userTranslations.push({
-      id: Date.now(),
-      originalText,
-      translatedText,
-      sourceLanguage,
-      targetLanguage,
-      timestamp: new Date().toISOString()
-    });
-    
-    console.log(`📚 Stored translation for teaching: "${originalText}" → "${translatedText}"`);
-    
-    // Learn from this translation pair
-    await this.learnFromTranslation(
-      originalText, 
-      translatedText, 
-      sourceLanguage, 
-      targetLanguage
-    );
   }
 
   // Get recent translations for a user
@@ -490,15 +508,109 @@ Response:`;
   
   // Get unknown words that need translation
   async getUnknownWords(sourceLanguage, targetLanguage, limit = 20) {
-    return await this.translationMemoryDB.getPriorityUnknownWords(
-      sourceLanguage, 
-      targetLanguage, 
-      limit
-    );
+    try {
+      return await this.translationMemoryDB.getPriorityUnknownWords(
+        sourceLanguage, 
+        targetLanguage, 
+        limit
+      );
+    } catch (error) {
+      console.error('Error getting unknown words:', error);
+      return [];
+    }
   }
   
-  // Get translation memory statistics
-  async getTranslationStats() {
-    return await this.translationMemoryDB.getStats();
+  /**
+   * Get a batch of unknown words for review and translation with suggestions
+   */
+  async getUnknownWordsForReview(sourceLanguage, targetLanguage, limit = 10) {
+    try {
+      const unknownWords = await this.translationMemoryDB.getPriorityUnknownWords(
+        sourceLanguage, 
+        targetLanguage, 
+        limit
+      );
+      
+      // If we have AI translation capability, suggest translations
+      if (this.ollamaService) {
+        for (const wordItem of unknownWords) {
+          try {
+            // Only suggest if we have context
+            if (wordItem.contexts && wordItem.contexts.length > 0) {
+              const context = Array.isArray(wordItem.contexts) ? 
+                            wordItem.contexts[0] : 
+                            JSON.parse(wordItem.contexts)[0];
+              
+              const suggestedTranslation = await this.ollamaService.translate(
+                wordItem.word,
+                sourceLanguage,
+                targetLanguage,
+                context
+              );
+              
+              wordItem.suggestedTranslation = suggestedTranslation;
+            }
+          } catch (error) {
+            console.error(`Error suggesting translation for "${wordItem.word}":`, error);
+            // Continue with next word
+          }
+        }
+      }
+      
+      return unknownWords;
+    } catch (error) {
+      console.error('Error getting unknown words for review:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Submit a translation for an unknown word
+   */
+  async submitUnknownWordTranslation(word, translation, sourceLanguage, targetLanguage, userId = null) {
+    try {
+      // Add with high confidence since it's a direct submission
+      const result = await this.translationMemoryDB.addOrUpdate(
+        word,
+        translation,
+        sourceLanguage,
+        targetLanguage,
+        0.9, // High confidence
+        true, // User verified
+        null  // No specific context
+      );
+      
+      // If user ID is provided, record the contribution
+      if (userId) {
+        await this.translationMemoryDB.recordUserContribution(userId, result);
+      }
+      
+      console.log(`✅ User submitted translation for unknown word: "${word}" → "${translation}"`);
+      return {
+        success: true,
+        message: `Translation for "${word}" added to database`,
+        word: word,
+        translation: translation
+      };
+    } catch (error) {
+      console.error('Error submitting unknown word translation:', error);
+      return {
+        success: false,
+        error: 'Failed to save translation',
+        details: error.message
+      };
+    }
+  }
+  
+  /**
+   * Get user contribution statistics
+   */
+  async getUserContributionStats(userId) {
+    try {
+      return await this.translationMemoryDB.getUserContributionStats(userId);
+    } catch (error) {
+      console.error('Error getting user contribution stats:', error);
+      return { totalContributions: 0, userId };
+    }
   }
 }

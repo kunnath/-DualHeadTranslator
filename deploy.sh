@@ -13,12 +13,14 @@ COMPOSE_ENV_FILE=""
 PULL_IMAGES=false
 BACKUP_DB=false
 USE_GPU=true
+NO_GPU_OVERRIDE=""
 
 # Detect Mac/Apple Silicon
 if [[ $(uname) == "Darwin" && $(uname -m) == "arm64" ]]; then
   echo "🍎 Detected Apple Silicon (M-series Mac)"
   USE_GPU=false
   MAC_OVERRIDE="-f docker-compose.mac.yml"
+  NO_GPU_OVERRIDE="-f docker-compose.no-gpu.yml"
 else
   MAC_OVERRIDE=""
 fi
@@ -46,6 +48,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-gpu)
       USE_GPU=false
+      NO_GPU_OVERRIDE="-f docker-compose.no-gpu.yml"
       shift
       ;;
     --help|-h)
@@ -55,7 +58,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --dev, -d        Deploy in development mode (optimized for local development)"
       echo "  --pull           Pull latest images before deploying"
       echo "  --backup         Backup the database before deploying"
-      echo "  --no-gpu         Run without GPU support"
+      echo "  --no-gpu         Run without GPU support (uses docker-compose.no-gpu.yml override)"
       echo "  --help, -h       Show this help message"
       exit 0
       ;;
@@ -123,32 +126,36 @@ if [ "$BACKUP_DB" = true ]; then
   echo "✅ Database backup created: $BACKUP_FILENAME.gz"
 fi
 
-# Pull latest images if requested
-if [ "$PULL_IMAGES" = true ]; then
-  echo "📥 Pulling latest Docker images..."
-  docker-compose -f $COMPOSE_FILE pull
-fi
-
 # Set GPU options
 if [ "$USE_GPU" = false ]; then
   export DOCKER_COMPOSE_GPU_FLAG=""
-  echo "🖥️ Running without GPU support"
+  # Use the permanent no-GPU override file
+  NO_GPU_OVERRIDE="-f docker-compose.no-gpu.yml"
+  echo "🖥️ Running without GPU support (using docker-compose.no-gpu.yml)"
 else
   # Check if NVIDIA runtime is available
   if docker info | grep -q "Runtimes:.*nvidia"; then
     export DOCKER_COMPOSE_GPU_FLAG="--gpus all"
+    NO_GPU_OVERRIDE=""
     echo "🖥️ Running with NVIDIA GPU support"
   else
     echo "⚠️ NVIDIA runtime not available. Running without GPU support."
     export DOCKER_COMPOSE_GPU_FLAG=""
+    NO_GPU_OVERRIDE="-f docker-compose.no-gpu.yml"
   fi
+fi
+
+# Pull latest images if requested
+if [ "$PULL_IMAGES" = true ]; then
+  echo "📥 Pulling latest Docker images..."
+  docker-compose -f docker-compose.yml ${NO_GPU_OVERRIDE} pull
 fi
 
 # Deploy the application
 echo "🚀 Starting the Voice Translator services..."
-FINAL_COMPOSE_FILE="docker-compose.yml ${COMPOSE_ENV_FILE} ${MAC_OVERRIDE}"
+FINAL_COMPOSE_FILE="docker-compose.yml ${COMPOSE_ENV_FILE} ${MAC_OVERRIDE} ${NO_GPU_OVERRIDE}"
 echo "Using Docker Compose files: ${FINAL_COMPOSE_FILE}"
-docker-compose -f docker-compose.yml ${COMPOSE_ENV_FILE} ${MAC_OVERRIDE} up -d
+docker-compose -f docker-compose.yml ${COMPOSE_ENV_FILE} ${MAC_OVERRIDE} ${NO_GPU_OVERRIDE} up -d
 
 # Check if the deployment was successful
 if [ $? -eq 0 ]; then

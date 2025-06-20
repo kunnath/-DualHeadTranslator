@@ -1,0 +1,10 @@
+version: '3.8'
+
+# This is an override file for docker-compose.yml to run without GPU support
+# Use it with: docker-compose -f docker-compose.yml -f docker-compose.no-gpu.yml up -d
+
+services:
+  # Override the Ollama service configuration to remove GPU requirements
+  ollama:
+    deploy:
+      resources: {}  # Remove all resource requirements including GPU
